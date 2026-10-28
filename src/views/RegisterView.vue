@@ -1,82 +1,77 @@
 <template>
-  <div class="register-container">
-    <div class="register-card">
-      <div class="card-header">
-        <div class="brand-icon">🌱</div>
-        <h2>创建新账户</h2>
-        <p class="card-subtitle">加入我们，开启水稻表型分析之旅</p>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21V10" />
+            <path d="M12 10c0-3.3 2.7-6 6-6 0 3.3-2.7 6-6 6Z" />
+            <path d="M12 14c0-3.3-2.7-6-6-6 0 3.3 2.7 6 6 6Z" />
+            <path d="M8.5 21h7" />
+          </svg>
+        </span>
+        <h1>{{ t('创建账户') }}</h1>
+        <p class="auth-subtitle">{{ t('注册后即可上传图像并导出表型数据') }}</p>
       </div>
-      <form @submit.prevent="handleRegister" class="register-form">
+
+      <form class="auth-form" @submit.prevent="handleRegister">
         <div class="form-group">
-          <label for="email">邮箱地址</label>
-          <div class="input-wrapper">
-            <span class="input-icon">📧</span>
-            <input
-              type="email"
-              id="email"
-              v-model="email"
-              placeholder="请输入您的邮箱"
-              required
-              autocomplete="email"
-            />
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="password">密码</label>
-          <div class="input-wrapper">
-            <span class="input-icon">🔒</span>
-            <input
-              type="password"
-              id="password"
-              v-model="password"
-              placeholder="至少6位字符"
-              required
-              autocomplete="new-password"
-            />
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="confirmPassword">确认密码</label>
-          <div class="input-wrapper">
-            <span class="input-icon">🔐</span>
-            <input
-              type="password"
-              id="confirmPassword"
-              v-model="confirmPassword"
-              placeholder="再次输入密码"
-              required
-              autocomplete="new-password"
-            />
-          </div>
+          <label for="email">{{ t('邮箱') }}</label>
+          <input
+            type="email"
+            id="email"
+            v-model="email"
+            placeholder="name@example.com"
+            required
+            autocomplete="email"
+          />
         </div>
 
-        <transition name="form-msg">
-          <div v-if="errorMessage" class="error-message">
-            <span class="msg-icon">⚠️</span>
-            {{ errorMessage }}
-          </div>
-        </transition>
-        <transition name="form-msg">
-          <div v-if="successMessage" class="success-message">
-            <span class="msg-icon">✅</span>
-            {{ successMessage }}
-          </div>
-        </transition>
+        <div class="form-group">
+          <label for="password">{{ t('密码') }}</label>
+          <input
+            type="password"
+            id="password"
+            v-model="password"
+            :placeholder="t('至少 6 位字符')"
+            required
+            autocomplete="new-password"
+          />
+        </div>
 
-        <button type="submit" class="submit-button" :disabled="isLoading">
-          <span v-if="isLoading" class="loading-spinner"></span>
-          <span v-else class="btn-text">注 册</span>
+        <div class="form-group">
+          <label for="confirmPassword">{{ t('确认密码') }}</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            v-model="confirmPassword"
+            :placeholder="t('再次输入密码')"
+            required
+            autocomplete="new-password"
+          />
+        </div>
+
+        <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
+
+        <button type="submit" class="primary submit-button" :disabled="isLoading">
+          <span v-if="isLoading" class="spinner" aria-hidden="true"></span>
+          <span>{{ isLoading ? t('注册中') : t('注册') }}</span>
         </button>
       </form>
-      <div class="card-footer">
-        <span>已有账户？</span>
-        <router-link to="/login" class="login-link">返回登录 ←</router-link>
-      </div>
+
+      <p class="auth-footer">
+        {{ t('已有账户？') }}
+        <router-link to="/login">{{ t('返回登录') }}</router-link>
+      </p>
     </div>
   </div>
 </template>
 
 <script setup>
+import { useI18n } from '@/i18n';
+
+const { t } = useI18n();
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
@@ -93,7 +88,7 @@ const router = useRouter();
 
 const handleRegister = async () => {
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = '两次输入的密码不一致。';
+    errorMessage.value = t('两次输入的密码不一致。');
     return;
   }
 
@@ -109,212 +104,153 @@ const handleRegister = async () => {
   isLoading.value = false;
 
   if (success) {
-    successMessage.value = '注册成功！即将跳转到登录页面...';
+    successMessage.value = t('注册成功，正在跳转到登录页面…');
     setTimeout(() => {
       router.push({ name: 'login' });
     }, 2000);
   } else {
-    errorMessage.value = '注册失败，该邮箱可能已被占用。';
+    errorMessage.value = t('注册失败，该邮箱可能已被占用。');
   }
 };
 </script>
 
 <style scoped>
-.register-container {
+.auth-page {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   min-height: 100vh;
-  width: 100%;
-  padding: 20px;
+  padding: 24px;
+  background:
+    radial-gradient(720px 320px at 50% -8%, var(--color-primary-green-lightest), transparent 70%),
+    var(--color-background);
 }
 
-.register-card {
+.auth-card {
   width: 100%;
-  max-width: 420px;
-  padding: 36px 32px 28px;
+  max-width: 396px;
+  padding: 32px;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+  animation: authIn var(--transition-slow) ease both;
+}
+
+@keyframes authIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-header {
+  margin-bottom: 22px;
   text-align: center;
-  background-color: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: var(--shadow-2xl);
-  animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(30px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.card-header {
-  margin-bottom: 28px;
-}
-
-.brand-icon {
-  font-size: 44px;
-  width: 68px;
-  height: 68px;
-  display: flex;
+.brand-mark {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 14px;
-  background: linear-gradient(135deg, var(--color-primary-green-lightest), var(--color-primary-green-light));
-  border-radius: var(--radius-xl);
-  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.2);
-  animation: iconFloat 3s ease-in-out infinite;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-green-lightest);
+  color: var(--color-primary-green-dark);
 }
 
-@keyframes iconFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+.brand-mark svg {
+  width: 22px;
+  height: 22px;
 }
 
-.card-header h2 {
+.auth-header h1 {
   margin: 0;
-  font-size: 1.4em;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  letter-spacing: 0.3px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.card-subtitle {
+.auth-subtitle {
   margin: 6px 0 0;
-  font-size: 0.86em;
   color: var(--color-text-muted);
-}
-
-.register-form {
-  text-align: left;
+  font-size: 12.5px;
+  line-height: 1.6;
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.84em;
-  font-weight: 600;
   color: var(--color-text-secondary);
-  letter-spacing: 0.3px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
+.form-group input {
+  height: 38px;
+  font-size: 13.5px;
 }
 
-.input-icon {
-  position: absolute;
-  left: 14px;
-  font-size: 1em;
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.input-wrapper input {
-  width: 100%;
-  padding: 11px 14px 11px 42px;
-  border: 1.5px solid var(--color-border);
+.form-error {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(220, 38, 38, 0.16);
   border-radius: var(--radius-md);
-  font-size: 0.95em;
-  background-color: var(--color-surface);
-  color: var(--color-text-primary);
-  transition: all var(--transition-normal);
-  outline: none;
-  margin-bottom: 0;
+  background: var(--color-error-light);
+  color: var(--color-error);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
-.input-wrapper input:focus {
-  border-color: var(--color-primary-green);
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
-}
-
-.input-wrapper:focus-within .input-icon {
-  opacity: 1;
-  transform: scale(1.1);
+.form-success {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(22, 163, 74, 0.16);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-green-lightest);
+  color: var(--color-primary-green-dark);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .submit-button {
   width: 100%;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, var(--color-primary-green), var(--color-primary-green-dark));
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: 0.98em;
-  font-weight: 600;
-  letter-spacing: 2px;
-  margin-top: 8px;
-  transition: all var(--transition-normal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 4px 14px rgba(76, 175, 80, 0.35);
+  height: 38px;
+  margin-top: 14px;
+  font-size: 13.5px;
+  font-weight: 500;
 }
 
-.submit-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.45);
-}
-
-.submit-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.loading-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 
-.msg-icon {
-  margin-right: 6px;
-}
-
-.form-msg-enter-active {
-  animation: msgIn 0.3s ease-out;
-}
-
-.form-msg-leave-active {
-  animation: msgOut 0.2s ease-in;
-}
-
-@keyframes msgIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes msgOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-6px); }
-}
-
-.card-footer {
-  margin-top: 22px;
+.auth-footer {
+  margin: 20px 0 0;
   padding-top: 18px;
   border-top: 1px solid var(--color-border-light);
-  font-size: 0.88em;
   color: var(--color-text-muted);
+  font-size: 12.5px;
+  text-align: center;
 }
 
-.login-link {
-  font-weight: 600;
-  color: var(--color-primary-green-dark);
-  transition: all var(--transition-fast);
-}
-
-.login-link:hover {
-  color: var(--color-primary-green-darkest);
-  text-decoration: underline;
+.auth-footer a {
+  margin-left: 2px;
+  font-weight: 500;
 }
 </style>

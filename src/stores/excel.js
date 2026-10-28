@@ -1,18 +1,17 @@
 import { defineStore } from 'pinia';
+import { t } from '@/i18n';
 import { ref } from 'vue';
 import { excelService } from '@/services/excelServerce';
 
-const ASYNC_THRESHOLD = 20;
+const ASYNC_THRESHOLD = 1;
 
 export const useExcelStore = defineStore('excel', () => {
     const isLoading = ref(false);
     const error = ref(null);
-    const exportColumns = ref([]);
 
     const taskProgress = ref(0);
     const taskTotal = ref(0);
     const taskMessage = ref('');
-    const isAsyncTask = ref(false);
 
     function setError(message) {
         error.value = message;
@@ -22,26 +21,30 @@ export const useExcelStore = defineStore('excel', () => {
         taskProgress.value = 0;
         taskTotal.value = 0;
         taskMessage.value = '';
-        isAsyncTask.value = false;
     }
 
     function onProgressUpdate({ progress, total, message }) {
         taskProgress.value = progress ?? 0;
-        taskTotal.value = total ?? 0;
+        if (total && total > 0) {
+            taskTotal.value = total;
+        }
         taskMessage.value = message || '';
     }
 
-    async function downloadSingleExcelAction(analysisId, originalFilename, selectedColumns, unit) {
+    async function downloadSingleExcelAction(analysisId, originalFilename, selectedColumns, unit, group = 'stem') {
         isLoading.value = true;
         setError(null);
         resetProgress();
+        taskTotal.value = 1;
+        taskMessage.value = t('正在生成 Excel...');
         try {
-            const result = await excelService.exportSingleToExcel(analysisId, originalFilename, selectedColumns, unit);
+            const result = await excelService.exportSingleToExcel(analysisId, originalFilename, selectedColumns, unit, group);
+            taskProgress.value = 1;
             console.log(`Single Excel downloaded: ${result.filename}`);
             return true;
         } catch (err) {
             console.error('Download single Excel failed:', err);
-            const detail = err.response?.data?.detail || err.message || '下载Excel报告失败。';
+            const detail = err.response?.data?.detail || err.message || t('下载Excel报告失败。');
             setError(detail);
             return false;
         } finally {
@@ -49,34 +52,39 @@ export const useExcelStore = defineStore('excel', () => {
         }
     }
 
-    async function downloadBatchExcelAction(analysisIds, selectedColumns, unit) {
+    async function downloadBatchExcelAction(analysisIds, selectedColumns, unit, group = 'stem') {
         isLoading.value = true;
         setError(null);
         resetProgress();
+        taskTotal.value = analysisIds.length;
 
         const useAsync = analysisIds.length > ASYNC_THRESHOLD;
         if (useAsync) {
-            isAsyncTask.value = true;
-            taskMessage.value = '正在提交导出任务...';
+            taskProgress.value = 0;
+            taskMessage.value = t('正在提交导出任务...');
+        } else {
+            taskProgress.value = 0;
+            taskMessage.value = t('正在生成 Excel...');
         }
 
         try {
             if (useAsync) {
                 const { taskId } = await excelService.batchExportToExcel(
-                    analysisIds, selectedColumns, unit, true
+                    analysisIds, selectedColumns, unit, true, group
                 );
-                taskMessage.value = '导出任务已提交，处理中...';
+                taskMessage.value = t('导出任务已提交，处理中...');
                 await excelService.pollAndDownloadTask(taskId, onProgressUpdate, 1500);
             } else {
                 await excelService.batchExportToExcel(
-                    analysisIds, selectedColumns, unit, false
+                    analysisIds, selectedColumns, unit, false, group
                 );
             }
+            taskProgress.value = analysisIds.length;
             console.log(`Batch Excel downloaded (${analysisIds.length} items)`);
             return true;
         } catch (err) {
             console.error('Download batch Excel failed:', err);
-            const detail = err.response?.data?.detail || err.message || '批量下载Excel报告失败。';
+            const detail = err.response?.data?.detail || err.message || t('批量下载Excel报告失败。');
             setError(detail);
             return false;
         } finally {
@@ -85,22 +93,21 @@ export const useExcelStore = defineStore('excel', () => {
         }
     }
 
-    async function downloadExcelSummaryAction(selectedColumns, unit) {
+    async function downloadExcelSummaryAction(selectedColumns, unit, group = 'stem') {
         isLoading.value = true;
         setError(null);
         resetProgress();
-        isAsyncTask.value = true;
-        taskMessage.value = '正在提交导出任务...';
+        taskMessage.value = t('正在提交导出任务...');
 
         try {
-            const { taskId } = await excelService.exportAllToExcel(selectedColumns, unit, true);
-            taskMessage.value = '汇总导出任务已提交，处理中...';
+            const { taskId } = await excelService.exportAllToExcel(selectedColumns, unit, true, group);
+            taskMessage.value = t('汇总导出任务已提交，处理中...');
             await excelService.pollAndDownloadTask(taskId, onProgressUpdate, 1500);
             console.log('Summary Excel downloaded');
             return true;
         } catch (err) {
             console.error('Download Excel summary failed:', err);
-            const detail = err.response?.data?.detail || err.message || '下载Excel总表失败。';
+            const detail = err.response?.data?.detail || err.message || t('下载Excel总表失败。');
             setError(detail);
             return false;
         } finally {
@@ -112,11 +119,9 @@ export const useExcelStore = defineStore('excel', () => {
     return {
         isLoading,
         error,
-        exportColumns,
         taskProgress,
         taskTotal,
         taskMessage,
-        isAsyncTask,
         setError,
         downloadSingleExcelAction,
         downloadBatchExcelAction,

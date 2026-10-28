@@ -1,395 +1,289 @@
 <template>
   <div class="home-view">
-    <section class="hero-section">
-      <div class="hero-content">
-        <div class="hero-badge">
-          <span class="badge-dot"></span>
-          智能图像分析平台
-        </div>
-        <h2 class="hero-title">
-          水稻微表型<br />
-          <span class="gradient-text">结构分割分析系统</span>
-        </h2>
+    <section class="hero">
+      <div class="hero-main">
+        <p class="eyebrow">{{ t('水稻微表型 · 结构分割') }}</p>
+        <h1 class="hero-title">
+          {{ t('用深度学习量化') }}<br />
+          {{ t('茎秆与剑叶的微观结构') }}
+        </h1>
         <p class="hero-desc">
-          基于深度学习的水稻茎秆与剑叶微表型智能分割平台，提供精准、高效、可视化的表型数据分析服务。
+          {{ t('上传显微图像，自动分割茎秆、维管束与空腔，输出 15 项表型指标，并支持 Excel / JSON 一键导出。') }}
         </p>
         <div class="hero-actions">
-          <router-link to="/stem" class="cta-button primary">
-            <span>🚀 开始分析</span>
-            <span class="cta-arrow">→</span>
-          </router-link>
-          <router-link to="/flag-leaf" class="cta-button secondary">
-            🌿 剑叶分析
-          </router-link>
+          <router-link to="/stem" class="btn primary">{{ t('开始分析') }}</router-link>
+          <router-link to="/flag-leaf" class="btn secondary">{{ t('剑叶分析') }}</router-link>
         </div>
       </div>
-      <div class="hero-visual">
-        <div class="floating-card card-1">
-          <span class="card-icon">🌾</span>
-          <span class="card-label">茎秆分析</span>
+
+      <aside class="hero-panel">
+        <div class="panel-row">
+          <span class="panel-label">{{ t('识别组织') }}</span>
+          <span class="panel-value">{{ t('4 类') }}</span>
         </div>
-        <div class="floating-card card-2">
-          <span class="card-icon">🍃</span>
-          <span class="card-label">剑叶识别</span>
+        <div class="panel-row">
+          <span class="panel-label">{{ t('表型指标') }}</span>
+          <span class="panel-value">{{ t('15 项') }}</span>
         </div>
-        <div class="floating-card card-3">
-          <span class="card-icon">📊</span>
-          <span class="card-label">数据导出</span>
+        <div class="panel-row">
+          <span class="panel-label">{{ t('导出格式') }}</span>
+          <span class="panel-value">Excel · JSON</span>
         </div>
-      </div>
+        <p class="panel-note">{{ t('支持整文件夹批量提交，处理进度实时可见') }}</p>
+      </aside>
     </section>
 
-    <section class="features-section">
-      <h3 class="section-title">核心功能</h3>
-      <div class="features-grid">
-        <div class="feature-card" v-for="feature in features" :key="feature.title">
-          <div class="feature-icon">{{ feature.icon }}</div>
-          <h4 class="feature-title">{{ feature.title }}</h4>
-          <p class="feature-desc">{{ feature.desc }}</p>
-        </div>
+    <section class="features">
+      <h2 class="section-title">{{ t('核心能力') }}</h2>
+      <div class="feature-grid stagger-in">
+        <article v-for="feature in features" :key="feature.title" class="feature-card">
+          <span class="feature-icon" v-html="feature.icon"></span>
+          <h3 class="feature-title">{{ t(feature.title) }}</h3>
+          <p class="feature-desc">{{ t(feature.desc) }}</p>
+        </article>
       </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { useI18n } from '@/i18n';
 
-const features = ref([
+const { t } = useI18n();
+const icon = (paths) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+
+const features = [
   {
-    icon: '🌱',
-    title: '茎秆微表型分析',
-    desc: '自动识别和分割水稻茎秆横截面，提取维管束数目、面积、茎秆直径等关键表型参数。'
+    icon: icon('<path d="M4 7h16" /><path d="M4 12h10" /><path d="M4 17h7" />'),
+    title: '一键分割',
+    desc: '上传图像即开始分析，自动生成带掩膜的标注图与 LabelMe 格式 JSON。',
   },
   {
-    icon: '🍃',
-    title: '剑叶智能分割',
-    desc: '针对水稻剑叶进行精准分割和特征提取，为作物育种和生长监测提供数据支持。'
+    icon: icon('<circle cx="8" cy="9" r="3" /><circle cx="16" cy="15" r="3" /><path d="M4 20h6M14 4h6" />'),
+    title: '维管束计数',
+    desc: '自动区分大、小维管束，统计数量、总面积及两者比值。',
   },
   {
-    icon: '⚡',
-    title: '批量并行处理',
-    desc: '支持文件夹批量上传，多任务并行处理，大幅提升分析效率，适用于大规模样本分析。'
+    icon: icon('<path d="M12 3v18" /><path d="M5 8h14" /><path d="M7 20h10" />'),
+    title: '几何测量',
+    desc: '茎秆直径、周长、面积、空腔面积及其与茎秆的比值，全部自动计算。',
   },
   {
-    icon: '📈',
-    title: '可视化展示',
-    desc: '原始图像与分割结果对比展示，支持缩放、拖拽交互，直观查看模型分割效果。'
+    icon: icon('<rect x="3" y="7" width="12" height="12" rx="2" /><path d="M9 3h10a2 2 0 0 1 2 2v10" />'),
+    title: '批量处理',
+    desc: '支持整文件夹提交，后台逐张处理，批量进度集中在浮层展示。',
   },
   {
-    icon: '📋',
-    title: '灵活数据导出',
-    desc: '支持 JSON 和 Excel 多种格式导出，可自定义数据字段和单位，方便下游数据分析。'
+    icon: icon('<path d="M12 3v10" /><path d="m8 9 4 4 4-4" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />'),
+    title: '数据导出',
+    desc: '自由勾选需要的指标，导出单条报告、批量总表或原始 JSON。',
   },
   {
-    icon: '🔒',
-    title: '安全账户体系',
-    desc: '完善的用户认证与额度管理系统，保障数据安全，提供稳定可靠的服务体验。'
+    icon: icon('<rect x="3" y="4" width="18" height="14" rx="2" /><path d="M7 8h6M7 12h4" /><path d="M8 21h8" />'),
+    title: '结果可复核',
+    desc: '原图与分割结果并排对照，支持缩放与拖拽，便于人工核查。',
   },
-]);
+];
 </script>
 
 <style scoped>
 .home-view {
-  padding: 20px 28px;
-  animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 8px 0 24px;
 }
 
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-section {
-  display: flex;
-  justify-content: space-between;
+/* ==================== 首屏 ==================== */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 32px;
   align-items: center;
-  gap: 40px;
-  padding: 40px 10px 50px;
-  flex-wrap: wrap;
+  padding: 36px 0 44px;
 }
 
-.hero-content {
-  flex: 1;
-  min-width: 320px;
-  max-width: 600px;
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  background: linear-gradient(135deg, var(--color-primary-green-lightest), var(--color-primary-green-bg));
-  border-radius: 50px;
-  font-size: 0.82em;
-  font-weight: 600;
-  color: var(--color-primary-green-darkest);
-  margin-bottom: 20px;
-  border: 1px solid rgba(76, 175, 80, 0.2);
-}
-
-.badge-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-primary-green);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
-  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+.eyebrow {
+  margin: 0 0 14px;
+  color: var(--color-primary-green-dark);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .hero-title {
-  font-size: 2.5em;
-  font-weight: 800;
-  line-height: 1.2;
   margin: 0 0 16px;
   color: var(--color-text-primary);
-  letter-spacing: -0.5px;
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, var(--color-primary-green-dark) 0%, var(--color-primary-green) 50%, #66bb6a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.32;
+  letter-spacing: -0.02em;
 }
 
 .hero-desc {
-  font-size: 1.02em;
-  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 0 26px;
   color: var(--color-text-secondary);
-  margin: 0 0 28px;
+  font-size: 13.5px;
+  line-height: 1.75;
 }
 
 .hero-actions {
   display: flex;
-  gap: 14px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
-.cta-button {
+.btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 13px 26px;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  font-size: 0.95em;
-  transition: all var(--transition-normal);
-  text-decoration: none;
-  cursor: pointer;
-  border: none;
-}
-
-.cta-button.primary {
-  background: linear-gradient(135deg, var(--color-primary-green), var(--color-primary-green-dark));
-  color: white;
-  box-shadow: 0 4px 14px rgba(76, 175, 80, 0.35);
-}
-
-.cta-button.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 22px rgba(76, 175, 80, 0.45);
-  text-decoration: none;
-}
-
-.cta-arrow {
-  display: inline-block;
-  transition: transform var(--transition-normal);
-}
-
-.cta-button.primary:hover .cta-arrow {
-  transform: translateX(4px);
-}
-
-.cta-button.secondary {
-  background-color: var(--color-surface);
-  color: var(--color-text-secondary);
-  border: 1.5px solid var(--color-border);
-}
-
-.cta-button.secondary:hover {
-  background-color: var(--color-primary-green-lightest);
-  border-color: var(--color-primary-green-light);
-  color: var(--color-primary-green-dark);
-  transform: translateY(-2px);
-  text-decoration: none;
-}
-
-.hero-visual {
-  flex: 1;
-  min-width: 280px;
-  height: 380px;
-  position: relative;
-  display: flex;
-  align-items: center;
   justify-content: center;
+  height: 36px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
-.floating-card {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 20px 24px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  transition: all var(--transition-bounce);
-  animation: floatCard 4s ease-in-out infinite;
+.btn:hover {
+  text-decoration: none;
 }
 
-.floating-card:hover {
-  transform: scale(1.05) translateY(-4px);
-  box-shadow: var(--shadow-xl);
+.btn.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
 }
 
-.card-icon {
-  font-size: 32px;
+.btn.primary:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: #fff;
 }
 
-.card-label {
-  font-size: 0.85em;
-  font-weight: 600;
+.btn.secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border);
   color: var(--color-text-secondary);
 }
 
-.card-1 {
-  top: 40px;
-  left: 30px;
-  animation-delay: 0s;
-}
-
-.card-2 {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: 0.5s;
-  padding: 28px 32px;
-}
-
-.card-3 {
-  bottom: 40px;
-  right: 30px;
-  animation-delay: 1s;
-}
-
-.card-1:hover,
-.card-2:hover,
-.card-3:hover {
-  animation-play-state: paused;
-}
-
-@keyframes floatCard {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-.card-2 {
-  animation: floatCardCenter 4s ease-in-out infinite;
-}
-
-@keyframes floatCardCenter {
-  0%, 100% { transform: translate(-50%, -50%); }
-  50% { transform: translate(-50%, -54%); }
-}
-
-.features-section {
-  padding: 20px 10px;
-}
-
-.section-title {
-  font-size: 1.4em;
-  font-weight: 700;
-  margin: 0 0 24px;
+.btn.secondary:hover {
+  border-color: var(--color-border-strong);
   color: var(--color-text-primary);
-  position: relative;
-  padding-left: 16px;
 }
 
-.section-title::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 24px;
-  background: linear-gradient(180deg, var(--color-primary-green), var(--color-primary-green-light));
-  border-radius: 2px;
+/* ---- 右侧指标卡 ---- */
+.hero-panel {
+  padding: 6px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
 }
 
-.features-grid {
+.panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.panel-label {
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+}
+
+.panel-value {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.panel-note {
+  padding: 12px 0 14px;
+  color: var(--color-text-light);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ==================== 功能列表 ==================== */
+.section-title {
+  margin: 0 0 16px;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
 }
 
 .feature-card {
-  padding: 22px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-normal);
-  cursor: default;
-  animation: cardSlideIn 0.5s ease-out backwards;
-}
-
-.feature-card:nth-child(1) { animation-delay: 0.05s; }
-.feature-card:nth-child(2) { animation-delay: 0.1s; }
-.feature-card:nth-child(3) { animation-delay: 0.15s; }
-.feature-card:nth-child(4) { animation-delay: 0.2s; }
-.feature-card:nth-child(5) { animation-delay: 0.25s; }
-.feature-card:nth-child(6) { animation-delay: 0.3s; }
-
-@keyframes cardSlideIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  transition: border-color var(--transition-fast), transform var(--transition-normal),
+    box-shadow var(--transition-normal);
 }
 
 .feature-card:hover {
-  transform: translateY(-4px);
+  border-color: var(--color-border-strong);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  border-color: var(--color-primary-green-light);
-}
-
-.feature-icon {
-  font-size: 28px;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary-green-lightest), var(--color-primary-green-bg));
-  border-radius: var(--radius-lg);
-  margin-bottom: 14px;
-  transition: transform var(--transition-bounce);
 }
 
 .feature-card:hover .feature-icon {
-  transform: scale(1.1) rotate(-4deg);
+  transform: scale(1.06);
+}
+
+.feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-green-lightest);
+  color: var(--color-primary-green-dark);
+  transition: transform var(--transition-fast);
+}
+
+.feature-icon :deep(svg) {
+  width: 17px;
+  height: 17px;
 }
 
 .feature-title {
-  font-size: 1.02em;
-  font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--color-text-primary);
+  font-size: 13.5px;
+  font-weight: 600;
 }
 
 .feature-desc {
-  font-size: 0.86em;
-  line-height: 1.6;
-  color: var(--color-text-muted);
   margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding: 20px 0 32px;
+  }
+
+  .hero-title {
+    font-size: 24px;
+  }
 }
 </style>

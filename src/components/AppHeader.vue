@@ -1,58 +1,90 @@
 <template>
   <header class="app-header">
-    <div class="header-title">
-      <span class="title-icon">🌾</span>
-      <h1>水稻微表型结构分割平台</h1>
+    <div class="header-left">
+      <span class="header-title">{{ pageTitle }}</span>
+      <span class="header-sep" aria-hidden="true"></span>
+      <span class="header-subtitle">{{ t('水稻微表型结构分割平台') }}</span>
     </div>
+
     <div class="user-info" v-if="authStore.isAuthenticated">
-      <div class="dropdown" ref="dropdownRef" @click="openDropdown" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
-        <div class="dropdown-trigger">
-          <div class="avatar">{{ avatarInitial }}</div>
-          <span class="user-name">{{ authStore.user?.email || '用户' }}</span>
-          <span class="dropdown-arrow" :class="{ open: isDropdownOpen }">▾</span>
-        </div>
+      <div
+        class="dropdown"
+        ref="dropdownRef"
+        @click="openDropdown"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
+      >
+        <button class="dropdown-trigger" type="button" aria-haspopup="menu">
+          <span class="avatar">{{ avatarInitial }}</span>
+          <span class="user-name">{{ authStore.user?.email || t('用户') }}</span>
+          <svg class="dropdown-arrow" :class="{ open: isDropdownOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
         <transition name="dropdown">
-          <div class="dropdown-menu" v-show="isDropdownOpen">
+          <div class="dropdown-menu" v-show="isDropdownOpen" role="menu">
             <div class="menu-header">
               <div class="menu-avatar">{{ avatarInitial }}</div>
               <div class="menu-user">
-                <div class="menu-email">{{ authStore.user?.email || '用户' }}</div>
-                <div class="menu-badge">已登录</div>
+                <div class="menu-email">{{ authStore.user?.email || t('用户') }}</div>
+                <div class="menu-badge">{{ t('已登录') }}</div>
               </div>
             </div>
             <div class="menu-divider"></div>
-            <button class="dropdown-item" @click.stop="goToUserCenter">
-              <span class="item-icon">👤</span>
-              <span>用户中心</span>
+            <button class="dropdown-item" role="menuitem" @click.stop="goToUserCenter">
+              <span class="item-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="8.5" r="3.5" /><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6" />
+                </svg>
+              </span>
+              <span>{{ t('用户中心') }}</span>
             </button>
-            <button class="dropdown-item logout-btn" @click.stop="handleLogout">
-              <span class="item-icon">🚪</span>
-              <span>退出登录</span>
+            <button class="dropdown-item logout-btn" role="menuitem" @click.stop="handleLogout">
+              <span class="item-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><polyline points="10 8 14 12 10 16" /><path d="M14 12H4" />
+                </svg>
+              </span>
+              <span>{{ t('退出登录') }}</span>
             </button>
           </div>
         </transition>
       </div>
     </div>
+
     <div class="user-info" v-else>
-      <button class="login-button" @click="goToLogin">
-        <span>登录</span>
-        <span class="login-arrow">→</span>
-      </button>
+      <button class="primary login-button" type="button" @click="goToLogin">{{ t('登录') }}</button>
     </div>
   </header>
 </template>
 
 <script setup>
+import { useI18n } from '@/i18n';
+
+const { t } = useI18n();
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 const isDropdownOpen = ref(false);
 const dropdownOpenSource = ref(null);
 const dropdownRef = ref(null);
 let hoverCloseTimer = null;
+
+const PAGE_TITLES = {
+  home: '首页',
+  stem: '水稻茎秆分析',
+  'flag-leaf': '水稻剑叶分析',
+  'user-center': '用户中心',
+  login: '登录',
+  register: '注册',
+};
+
+const pageTitle = computed(() => t(PAGE_TITLES[route.name] || '水稻表型分析'));
 
 const avatarInitial = computed(() => {
   const email = authStore.user?.email || 'U';
@@ -122,50 +154,50 @@ const goToLogin = () => {
 
 <style scoped>
 .app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 28px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.82));
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(200, 230, 201, 0.5);
-  color: var(--color-primary-green-darkest);
   position: relative;
   z-index: 999;
-  box-shadow: var(--shadow-xs);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+  height: var(--header-height);
+  padding: 0 28px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .header-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.title-icon {
-  font-size: 24px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary-green-lightest), var(--color-primary-green-light));
-  border-radius: var(--radius-lg);
+.header-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--color-border);
 }
 
-.header-title h1 {
-  margin: 0;
-  font-size: 1.25em;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  background: linear-gradient(135deg, var(--color-primary-green-darkest), var(--color-primary-green-dark));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.header-subtitle {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-info {
   position: relative;
+  flex-shrink: 0;
 }
 
 .dropdown {
@@ -175,52 +207,51 @@ const goToLogin = () => {
 .dropdown-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 14px 6px 6px;
-  border-radius: 50px;
-  transition: all var(--transition-normal);
-  background: transparent;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
   border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
 }
 
 .dropdown-trigger:hover {
-  background-color: rgba(76, 175, 80, 0.08);
-  border-color: rgba(76, 175, 80, 0.2);
-}
-
-.dropdown-trigger:hover,
-.dropdown-trigger:hover .user-name {
-  color: var(--color-primary-green-darkest);
+  border-color: var(--color-border);
+  background: var(--color-surface-hover);
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary-green), var(--color-primary-green-dark));
-  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-primary-green-lightest);
+  color: var(--color-primary-green-dark);
+  font-size: 12px;
   font-weight: 600;
-  font-size: 0.9em;
-  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+  transition: transform var(--transition-fast);
+}
+
+.dropdown-trigger:hover .avatar {
+  transform: scale(1.06);
 }
 
 .user-name {
-  font-size: 0.9em;
-  color: var(--color-text-secondary);
   max-width: 160px;
   overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .dropdown-arrow {
-  display: inline-block;
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-light);
   transition: transform var(--transition-normal);
-  font-size: 0.9em;
-  color: var(--color-text-muted);
 }
 
 .dropdown-arrow.open {
@@ -229,145 +260,148 @@ const goToLogin = () => {
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 8px);
   right: 0;
-  background: white;
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
-  min-width: 240px;
   z-index: 1000;
-  overflow: hidden;
+  min-width: 232px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
   transform-origin: top right;
 }
 
-.dropdown-enter-active {
-  transition: all var(--transition-normal);
-}
-
+.dropdown-enter-active,
 .dropdown-leave-active {
-  transition: all var(--transition-fast);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-8px) scale(0.96);
+  transform: translateY(-4px) scale(0.99);
 }
 
 .menu-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
-  background: linear-gradient(135deg, var(--color-primary-green-lightest), var(--color-primary-green-bg));
+  gap: 10px;
+  padding: 10px;
 }
 
 .menu-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary-green), var(--color-primary-green-dark));
-  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary-green-lightest);
+  color: var(--color-primary-green-dark);
+  font-size: 13px;
   font-weight: 600;
-  font-size: 1em;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
 
 .menu-user {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .menu-email {
-  font-size: 0.88em;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  max-width: 180px;
+  max-width: 170px;
   overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .menu-badge {
-  font-size: 0.72em;
-  color: var(--color-primary-green-dark);
-  font-weight: 500;
+  color: var(--color-text-muted);
+  font-size: 11px;
 }
 
 .menu-divider {
   height: 1px;
-  background: var(--color-border-light);
   margin: 4px 0;
+  background: var(--color-border-light);
 }
 
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 12px 18px;
-  text-align: left;
+  height: 34px;
+  padding: 0 10px;
   border: none;
-  background: none;
-  cursor: pointer;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--color-text-secondary);
-  font-size: 0.9em;
-  font-weight: 500;
-  transition: all var(--transition-fast);
-  border-radius: 0;
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+  justify-content: flex-start;
+  transition: background-color var(--transition-fast), color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .dropdown-item:hover {
-  background-color: var(--color-primary-green-lightest);
-  color: var(--color-primary-green-darkest);
-  transform: none;
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+  transform: translateX(2px);
 }
 
-.dropdown-item .item-icon {
-  width: 20px;
-  text-align: center;
+.item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  transition: transform var(--transition-fast), color var(--transition-fast);
+}
+
+.dropdown-item:hover .item-icon {
+  transform: scale(1.08);
+}
+
+.item-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .dropdown-item.logout-btn {
   color: var(--color-error);
 }
 
+.dropdown-item.logout-btn .item-icon {
+  color: var(--color-error);
+}
+
 .dropdown-item.logout-btn:hover {
-  background-color: var(--color-error-light);
+  background: var(--color-error-light);
   color: var(--color-error);
 }
 
 .login-button {
-  background: linear-gradient(135deg, var(--color-primary-green), var(--color-primary-green-dark));
-  color: white;
-  border: none;
-  padding: 9px 22px;
-  border-radius: 50px;
-  cursor: pointer;
-  font-size: 0.9em;
-  font-weight: 600;
-  transition: all var(--transition-normal);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.25);
+  height: 32px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
 }
 
-.login-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(76, 175, 80, 0.4);
-}
+@media (max-width: 900px) {
+  .app-header {
+    padding: 0 16px;
+  }
 
-.login-button:hover .login-arrow {
-  transform: translateX(4px);
-}
-
-.login-arrow {
-  display: inline-block;
-  transition: transform var(--transition-normal);
+  .header-sep,
+  .header-subtitle,
+  .user-name {
+    display: none;
+  }
 }
 </style>

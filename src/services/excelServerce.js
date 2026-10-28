@@ -1,10 +1,11 @@
 import apiClient from './apiClient';
+import { t } from '@/i18n';
 import { downloadBlob } from '@/utils/fileDownload';
 import { transformKeys } from '@/utils/transform';
 
-const getExportColumns = () => {
+const getExportColumns = (group = 'stem') => {
     console.debug('Fetching export columns configuration...');
-    return apiClient.get('/excel/columns')
+    return apiClient.get('/excel/columns', { params: { group } })
         .then(response => response.data)
         .catch(error => {
             console.error('Failed to fetch export columns:', error.response?.data || error.message);
@@ -12,9 +13,9 @@ const getExportColumns = () => {
         });
 };
 
-const exportSingleToExcel = (analysisId, originalFilename, selectedColumns, unit) => {
+const exportSingleToExcel = (analysisId, originalFilename, selectedColumns, unit, group = 'stem') => {
     console.debug(`Exporting single analysis ${analysisId} (${originalFilename}) to Excel...`);
-    return apiClient.post(`/excel/${analysisId}`, { selectedColumns, unit }, {
+    return apiClient.post(`/excel/${analysisId}`, { selectedColumns, unit, group }, {
         responseType: 'blob',
         timeout: 30000
     }).then(response => {
@@ -27,9 +28,9 @@ const exportSingleToExcel = (analysisId, originalFilename, selectedColumns, unit
     });
 };
 
-const batchExportToExcel = (analysisIds, selectedColumns, unit, asyncMode = false) => {
+const batchExportToExcel = (analysisIds, selectedColumns, unit, asyncMode = false, group = 'stem') => {
     console.debug(`Batch exporting ${analysisIds.length} analyses to Excel, asyncMode:`, asyncMode);
-    return apiClient.post('/excel/batch', { analysisIds, selectedColumns, unit, asyncMode }, {
+    return apiClient.post('/excel/batch', { analysisIds, selectedColumns, unit, asyncMode, group }, {
         responseType: asyncMode ? 'json' : 'blob',
         timeout: asyncMode ? 10000 : Math.max(30000, analysisIds.length * 2000)
     }).then(response => {
@@ -47,9 +48,9 @@ const batchExportToExcel = (analysisIds, selectedColumns, unit, asyncMode = fals
     });
 };
 
-const exportAllToExcel = (selectedColumns, unit, asyncMode = true) => {
+const exportAllToExcel = (selectedColumns, unit, asyncMode = true, group = 'stem') => {
     console.debug('Exporting all analyses to Excel, asyncMode:', asyncMode);
-    return apiClient.post('/excel/summary', { selectedColumns, unit, asyncMode }, {
+    return apiClient.post('/excel/summary', { selectedColumns, unit, asyncMode, group }, {
         responseType: asyncMode ? 'json' : 'blob',
         timeout: asyncMode ? 10000 : 120000
     }).then(response => {
@@ -93,12 +94,25 @@ const pollAndDownloadTask = (taskId, onProgress, interval = 1500) => {
     return new Promise((resolve, reject) => {
         let attempts = 0;
         const maxAttempts = 300;
+        let timer = null;
+        let stopped = false;
 
+        const finish = (fn, value) => {
+            if (stopped) return;
+            stopped = true;
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+            }
+            fn(value);
+        };
+
+        // 用递归 setTimeout 代替 setInterval：上一次请求返回后才安排下一次，
+        // 后端较慢时不会堆积并发的状态查询请求。
         const poll = async () => {
             attempts++;
             if (attempts > maxAttempts) {
-                clearInterval(timer);
-                reject(new Error('导出任务超时'));
+                finish(reject, new Error(t('导出任务超时')));
                 return;
             }
             try {
@@ -111,24 +125,24 @@ const pollAndDownloadTask = (taskId, onProgress, interval = 1500) => {
                 });
 
                 if (status.status === 'completed') {
-                    clearInterval(timer);
                     try {
                         const result = await downloadTaskResult(taskId);
-                        resolve(result);
+                        finish(resolve, result);
                     } catch (dlErr) {
-                        reject(dlErr);
+                        finish(reject, dlErr);
                     }
-                } else if (status.status === 'failed') {
-                    clearInterval(timer);
-                    reject(new Error(status.error || '导出任务失败'));
+                    return;
                 }
+                if (status.status === 'failed') {
+                    finish(reject, new Error(status.error || t('导出任务失败')));
+                    return;
+                }
+                if (!stopped) timer = setTimeout(poll, interval);
             } catch (err) {
-                clearInterval(timer);
-                reject(err);
+                finish(reject, err);
             }
         };
 
-        const timer = setInterval(poll, interval);
         poll();
     });
 };

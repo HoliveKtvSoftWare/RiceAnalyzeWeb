@@ -1,144 +1,172 @@
 <template>
   <div class="user-center-view">
-    <main class="user-center-content">
-      <!-- 用户信息卡片 -->
-      <section class="user-info-section card">
-        <div class="section-header">
-          <h3>个人信息</h3>
-          <button @click="refreshUserInfo" :disabled="isLoading" class="refresh-button">
-            {{ isLoading ? '刷新中...' : '刷新信息' }}
+    <header class="view-header">
+      <h1>{{ t('用户中心') }}</h1>
+      <p class="view-subtitle">{{ t('管理账户信息、分析额度与安全设置') }}</p>
+    </header>
+
+    <div class="panel-grid">
+      <!-- 个人信息 -->
+      <section class="panel">
+        <div class="panel-header">
+          <h3>{{ t('个人信息') }}</h3>
+          <button class="secondary small" @click="refreshUserInfo" :disabled="isLoading">
+            {{ isLoading ? t('刷新中…') : t('刷新') }}
           </button>
         </div>
-
-        <div v-if="authStore.user" class="user-details">
+        <div v-if="authStore.user" class="info-list">
           <div class="info-row">
-            <span class="label">用户ID:</span>
-            <span class="value">{{ authStore.user.id || 'N/A' }}</span>
+            <span class="label">{{ t('用户 ID') }}</span>
+            <span class="value mono">{{ authStore.user.id || 'N/A' }}</span>
           </div>
           <div class="info-row">
-            <span class="label">邮箱:</span>
+            <span class="label">{{ t('邮箱') }}</span>
             <span class="value">{{ authStore.user.email || 'N/A' }}</span>
           </div>
         </div>
-
-        <div v-else class="loading-message">
-          <p>正在加载用户信息...</p>
-        </div>
+        <p v-else class="muted-text">{{ t('正在加载用户信息…') }}</p>
       </section>
 
-      <!-- 额度信息卡片 -->
-      <section class="quota-section card">
-        <h3>额度信息</h3>
-        <div class="quota-details">
-          <div class="quota-item">
-            <div class="quota-label">当前额度</div>
-            <div class="quota-value">{{ authStore.userQuota || 0 }}</div>
-            <div class="quota-unit">次</div>
+      <!-- 额度 -->
+      <section class="panel">
+        <div class="panel-header">
+          <h3>{{ t('分析额度') }}</h3>
+        </div>
+        <div class="quota">
+          <div class="quota-headline">
+            <span class="quota-value">{{ authStore.userQuota || 0 }}</span>
+            <span class="quota-unit">{{ t('次可用') }}</span>
           </div>
-          <div class="quota-progress">
-            <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: quotaPercentage + '%' }"></div>
-            </div>
-            <div class="progress-text">{{ quotaPercentage }}% 已使用</div>
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: quotaPercentage + '%' }"></div>
           </div>
+          <p class="progress-text">{{ t('{n}% 已使用', { n: quotaPercentage }) }}</p>
         </div>
-        <div class="quota-actions">
-          <button class="primary" @click="showPurchaseModal = true">购买额度</button>
-          <button class="secondary" @click="showUsageHistory = true">查看使用记录</button>
-        </div>
-      </section>
-
-      <!-- 账户设置卡片 -->
-      <section class="settings-section card">
-        <h3>账户设置</h3>
-        <div class="settings-options">
-          <div class="setting-item">
-            <label for="language">界面语言:</label>
-            <select id="language" v-model="settings.language">
-              <option value="zh-CN">简体中文</option>
-              <option value="en-US">English</option>
-            </select>
-          </div>
-        </div>
-        <div class="settings-actions">
-          <button class="primary" @click="saveSettings" :disabled="!settingsChanged">保存设置</button>
-          <button class="secondary" @click="resetSettings">重置</button>
+        <div class="panel-actions">
+          <button class="primary" @click="showPurchaseModal = true">{{ t('购买额度') }}</button>
+          <button class="secondary" @click="showUsageHistory = true">{{ t('使用记录') }}</button>
         </div>
       </section>
 
-      <!-- 安全操作卡片 -->
-      <section class="security-section card">
-        <h3>安全操作</h3>
-        <div class="security-actions">
-          <button class="warning" @click="handleLogout">退出登录</button>
-          <button class="danger" @click="showDeleteModal = true">删除账户</button>
+      <!-- 账户设置 -->
+      <section class="panel">
+        <div class="panel-header">
+          <h3>{{ t('账户设置') }}</h3>
+        </div>
+        <div class="setting-row">
+          <label for="language">{{ t('界面语言') }}</label>
+          <select id="language" v-model="settings.language" class="select-inline">
+            <option v-for="item in SUPPORTED_LOCALES" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </option>
+          </select>
+        </div>
+        <div class="panel-actions">
+          <button class="primary" @click="saveSettings" :disabled="!settingsChanged">{{ t('保存设置') }}</button>
+          <button class="secondary" @click="resetSettings">{{ t('重置') }}</button>
         </div>
       </section>
-    </main>
 
-    <!-- 购买额度模态框 -->
+      <!-- 安全 -->
+      <section class="panel">
+        <div class="panel-header">
+          <h3>{{ t('安全') }}</h3>
+        </div>
+        <p class="muted-text">{{ t('退出当前登录，或永久删除账户及其全部数据。') }}</p>
+        <div class="panel-actions">
+          <button class="secondary" @click="handleLogout">{{ t('退出登录') }}</button>
+          <button class="danger-ghost" @click="showDeleteModal = true">{{ t('删除账户') }}</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- 购买额度 -->
     <div v-if="showPurchaseModal" class="modal-overlay" @click="showPurchaseModal = false">
-      <div class="modal-content" @click.stop>
-        <h3>购买额度</h3>
-        <div class="purchase-options">
-          <div class="purchase-option" v-for="option in purchaseOptions" :key="option.id"
-               :class="{ selected: selectedOption === option.id }"
-               @click="selectedOption = option.id">
-            <div class="option-amount">{{ option.amount }} 次</div>
-            <div class="option-price">¥{{ option.price }}</div>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="primary" @click="handlePurchase" :disabled="!selectedOption">确认购买</button>
-          <button class="secondary" @click="showPurchaseModal = false">取消</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 删除账户确认模态框 -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
-      <div class="modal-content danger" @click.stop>
-        <h3>确认删除账户</h3>
-        <p>此操作将永久删除您的账户和所有相关数据，无法恢复。</p>
-        <div class="delete-confirm">
-          <label>
-            <input type="checkbox" v-model="deleteConfirmed" />
-            我确认要删除我的账户
-          </label>
-        </div>
-        <div class="modal-actions">
-          <button class="danger" @click="handleDeleteAccount" :disabled="!deleteConfirmed">确认删除</button>
-          <button class="secondary" @click="showDeleteModal = false">取消</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 使用记录模态框 -->
-    <div v-if="showUsageHistory" class="modal-overlay" @click="showUsageHistory = false">
-      <div class="modal-content usage-history-modal" @click.stop>
+      <div class="modal" @click.stop>
         <div class="modal-header">
-          <h3>最近使用记录</h3>
-          <button class="close-btn" @click="showUsageHistory = false">&times;</button>
+          <h3>{{ t('购买额度') }}</h3>
+          <button class="icon-button" type="button" :aria-label="t('关闭')" @click="showPurchaseModal = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        <div class="purchase-options">
+          <button
+            v-for="option in purchaseOptions"
+            :key="option.id"
+            type="button"
+            class="purchase-option"
+            :class="{ selected: selectedOption === option.id }"
+            @click="selectedOption = option.id"
+          >
+            <span class="option-amount">{{ t('{n} 次', { n: option.amount }) }}</span>
+            <span class="option-price">¥{{ option.price }}</span>
+          </button>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary" @click="showPurchaseModal = false">{{ t('取消') }}</button>
+          <button class="primary" @click="handlePurchase" :disabled="!selectedOption">{{ t('确认购买') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除账户 -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ t('删除账户') }}</h3>
+          <button class="icon-button" type="button" :aria-label="t('关闭')" @click="showDeleteModal = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        <p class="modal-text">{{ t('此操作将永久删除您的账户和全部相关数据，且无法恢复。') }}</p>
+        <label class="confirm-check">
+          <input type="checkbox" v-model="deleteConfirmed" />
+          {{ t('我确认要删除我的账户') }}
+        </label>
+        <div class="modal-actions">
+          <button class="secondary" @click="showDeleteModal = false">{{ t('取消') }}</button>
+          <button class="danger" @click="handleDeleteAccount" :disabled="!deleteConfirmed">{{ t('确认删除') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 使用记录 -->
+    <div v-if="showUsageHistory" class="modal-overlay" @click="showUsageHistory = false">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ t('最近使用记录') }}</h3>
+          <button class="icon-button" type="button" :aria-label="t('关闭')" @click="showUsageHistory = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
         </div>
         <div v-if="usageHistory.length > 0" class="history-list">
           <div v-for="record in usageHistory" :key="record.id" class="history-item">
             <span class="record-date">{{ formatDate(record.date) }}</span>
-            <span class="record-action">{{ record.action }}</span>
-            <span class="record-cost">-{{ record.cost }} 额度</span>
+            <span class="record-action">{{ t(record.action) }}</span>
+            <span class="record-cost">-{{ record.cost }}</span>
           </div>
         </div>
-        <div v-else class="no-history">
-          <p>暂无使用记录</p>
-        </div>
+        <p v-else class="muted-text">{{ t('暂无使用记录') }}</p>
       </div>
     </div>
   </div>
 </template>
 
+
 <script setup>
+import { useI18n } from '@/i18n';
+
+const { t, locale, setLocale } = useI18n();
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { SUPPORTED_LOCALES } from '@/i18n';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -151,15 +179,25 @@ const showUsageHistory = ref(false);
 const selectedOption = ref(null);
 const deleteConfirmed = ref(false);
 
-// 用户设置
+// 用户设置：语言以 i18n 当前语言为准，切换即时生效
 const settings = ref({
   emailNotifications: true,
   autoSave: true,
-  language: 'zh-CN'
+  language: locale.value
 });
 
 // 默认设置（用于重置）
 let defaultSettings = { ...settings.value };
+
+// 下拉框改动即时应用（不必先点“保存设置”）
+watch(() => settings.value.language, (next) => {
+  if (next !== locale.value) setLocale(next);
+});
+
+// 外部（或刷新后）语言变化时，让下拉开态保持一致
+watch(locale, (next) => {
+  if (settings.value.language !== next) settings.value.language = next;
+});
 
 // 购买选项
 const purchaseOptions = ref([
@@ -217,14 +255,14 @@ const formatDate = (dateString) => {
 };
 
 const saveSettings = () => {
-  // 这里应该调用API保存设置
-  console.log('保存设置:', settings.value);
-  // 模拟保存成功
+  // 语言已即时生效；这里只把当前选择记为“默认值”，供重置使用
+  setLocale(settings.value.language);
   defaultSettings = { ...settings.value };
 };
 
 const resetSettings = () => {
   settings.value = { ...defaultSettings };
+  setLocale(settings.value.language);
 };
 
 const handlePurchase = () => {
@@ -256,486 +294,381 @@ watch(settings, (newSettings) => {
 
 <style scoped>
 .user-center-view {
-  padding: 24px 28px;
-  max-width: 1200px;
+  max-width: 960px;
   margin: 0 auto;
-  animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 4px 0 24px;
+  /* 页面切换动效：与首页、剑叶页一致，淡入 + 轻微上移。
+     用 backwards 而不是 both：动画结束后不保留 transform，
+     避免影响页面内 position: fixed 的弹窗定位。 */
+  animation: fadeInUp 220ms ease backwards;
 }
 
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+.view-header {
+  margin-bottom: 20px;
+  animation: fadeInUp 240ms ease backwards;
 }
 
-.user-center-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.card {
-  padding: 24px;
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--color-border-light);
-  transition: all var(--transition-normal);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-}
-
-h3 {
-  margin: 0 0 20px;
-  padding-bottom: 12px;
-  font-size: 1.1em;
-  font-weight: 700;
+.view-header h1 {
+  margin: 0;
   color: var(--color-text-primary);
-  border-bottom: 1px solid var(--color-border-light);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-h3::before {
-  content: '';
-  display: inline-block;
-  width: 4px;
-  height: 20px;
-  background: linear-gradient(180deg, var(--color-primary-green), var(--color-primary-green-light));
-  border-radius: 2px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
-}
-
-.section-header h3 {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.refresh-button {
-  padding: 7px 14px;
-  background-color: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: 0.86em;
-  color: var(--color-text-secondary);
-  transition: all var(--transition-fast);
-}
-
-.refresh-button:hover:not(:disabled) {
-  background-color: var(--color-primary-green-lightest);
-  border-color: var(--color-primary-green-light);
-  color: var(--color-primary-green-dark);
-  transform: translateY(-1px);
-}
-
-.user-details .info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  transition: background-color var(--transition-fast);
-}
-
-.user-details .info-row:hover {
-  background-color: var(--color-primary-green-bg);
-}
-
-.info-row .label {
-  font-weight: 500;
+.view-subtitle {
+  margin: 4px 0 0;
   color: var(--color-text-muted);
-  font-size: 0.9em;
+  font-size: 12.5px;
 }
 
-.info-row .value {
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  /* 四张面板依次入场，和首页功能卡片、剑叶指标卡保持同一节奏 */
+  animation: fadeInUp 260ms ease backwards;
+}
+
+.panel:nth-child(1) {
+  animation-delay: 20ms;
+}
+
+.panel:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.panel:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.panel:nth-child(4) {
+  animation-delay: 110ms;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.panel-header h3 {
+  margin: 0;
   color: var(--color-text-primary);
+  font-size: 13px;
   font-weight: 600;
 }
 
-.loading-message {
-  text-align: center;
-  padding: 28px;
-  color: var(--color-text-muted);
-  font-size: 0.9em;
+.small {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 11.5px;
 }
 
-.quota-item {
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-bottom: 18px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 12.5px;
 }
 
-.quota-label {
-  font-size: 0.92em;
-  font-weight: 500;
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  flex-shrink: 0;
   color: var(--color-text-muted);
+}
+
+.info-row .value {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.quota {
+  margin-bottom: 16px;
+}
+
+.quota-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .quota-value {
-  font-size: 2.2em;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--color-primary-green-dark), var(--color-primary-green));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1;
+  color: var(--color-text-primary);
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .quota-unit {
-  font-size: 0.9em;
   color: var(--color-text-muted);
-  font-weight: 500;
-}
-
-.quota-progress {
-  margin-bottom: 20px;
+  font-size: 12px;
 }
 
 .progress-bar {
-  width: 100%;
-  height: 10px;
-  background: linear-gradient(90deg, var(--color-border-light), var(--color-border));
-  border-radius: 5px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-hover);
   overflow: hidden;
-  margin-bottom: 8px;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-primary-green-light), var(--color-primary-green));
-  border-radius: 5px;
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-}
-
-.progress-fill::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  animation: shimmer 2s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  transition: width var(--transition-slow);
 }
 
 .progress-text {
-  font-size: 0.85em;
-  color: var(--color-text-muted);
-  text-align: right;
+  margin: 8px 0 0;
+  color: var(--color-text-light);
+  font-size: 11.5px;
 }
 
-.quota-actions {
+.setting-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0 4px;
 }
 
-.usage-history-modal {
-  max-width: 560px;
-  max-height: 400px;
-  overflow-y: auto;
+.setting-row label {
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+}
+
+.select-inline {
+  width: auto;
+  min-width: 128px;
+  /* 不要写死 height：基础样式有 9px 上下内边距，32px 高度会把文字行压扁导致下半截被裁掉。
+     用内边距决定高度，行高保持 1.5，视觉高度仍是 32px 左右。 */
+  height: auto;
+  padding: 6px 32px 6px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.muted-text {
+  margin: 0 0 14px;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.danger-ghost {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-error);
+}
+
+.danger-ghost:hover:not(:disabled) {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+/* ==================== 弹窗 ==================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(24, 24, 27, 0.36);
+  animation: fadeIn var(--transition-fast) both;
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xl);
+  animation: fadeInScale var(--transition-normal) both;
 }
 
 .modal-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .modal-header h3 {
-  margin-bottom: 0;
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.modal-header h3::before {
-  display: none;
-}
-
-.close-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-border-light);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 1.3em;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  padding: 0;
-  line-height: 1;
-}
-
-.close-btn:hover {
-  background-color: var(--color-error-light);
-  color: var(--color-error);
-  transform: rotate(90deg);
-}
-
-.history-list {
-  margin-bottom: 12px;
-}
-
-.history-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  margin-bottom: 6px;
-  background-color: var(--color-primary-green-bg);
-  transition: transform var(--transition-fast);
-}
-
-.history-item:hover {
-  transform: translateX(4px);
-}
-
-.record-date {
-  color: var(--color-text-muted);
-  font-size: 0.85em;
-}
-
-.record-action {
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.record-cost {
-  color: var(--color-error);
+  margin: 0;
+  font-size: 13.5px;
   font-weight: 600;
-  font-size: 0.9em;
 }
 
-.no-history {
-  text-align: center;
-  padding: 32px 20px;
-  color: var(--color-text-muted);
-  font-size: 0.9em;
-}
-
-.settings-options {
-  margin-bottom: 18px;
-}
-
-.setting-item {
+.icon-button {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  transition: background-color var(--transition-fast);
-}
-
-.setting-item:hover {
-  background-color: var(--color-primary-green-bg);
-}
-
-.setting-item label {
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  font-size: 0.92em;
-}
-
-.setting-item select {
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--color-border);
-  font-size: 0.9em;
-}
-
-.settings-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.security-actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
   justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-out;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.icon-button:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
-.modal-content {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  padding: 28px;
-  border-radius: var(--radius-xl);
-  max-width: 480px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow-2xl);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+.icon-button svg {
+  width: 15px;
+  height: 15px;
 }
 
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.92) translateY(16px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.modal-content h3 {
-  margin-top: 0;
-}
-
-.modal-content h3::before {
-  display: inline-block;
+.modal-text {
+  margin: 0 0 14px;
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+  line-height: 1.7;
 }
 
 .purchase-options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 20px 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .purchase-option {
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 18px 14px;
-  text-align: center;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
+  text-align: left;
 }
 
 .purchase-option:hover {
-  border-color: var(--color-primary-green-light);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-strong);
 }
 
 .purchase-option.selected {
-  border-color: var(--color-primary-green);
-  background: linear-gradient(135deg, var(--color-primary-green-lightest), var(--color-primary-green-bg));
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
-}
-
-.purchase-option.selected::after {
-  content: '✓';
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 22px;
-  height: 22px;
-  background: var(--color-primary-green);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75em;
-  font-weight: bold;
+  border-color: var(--color-accent);
+  background: var(--color-primary-green-bg);
 }
 
 .option-amount {
-  font-size: 1.25em;
-  font-weight: 700;
   color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .option-price {
-  color: var(--color-primary-green-dark);
-  font-weight: 600;
-  font-size: 0.95em;
-  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.confirm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
 }
 
 .modal-actions {
   display: flex;
-  gap: 10px;
   justify-content: flex-end;
-  margin-top: 8px;
+  gap: 8px;
 }
 
-.delete-confirm {
-  margin: 20px 0;
-  padding: 14px 16px;
-  background-color: var(--color-warning-light);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  border-radius: var(--radius-md);
+.history-list {
+  display: flex;
+  flex-direction: column;
 }
 
-.delete-confirm label {
+.history-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #92400e;
-  font-size: 0.9em;
-  cursor: pointer;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 12.5px;
 }
 
-.modal-content.danger {
-  border-left: 4px solid var(--color-error);
+.history-item:last-child {
+  border-bottom: none;
 }
 
-@media (max-width: 768px) {
-  .user-center-view {
-    padding: 16px;
-  }
+.record-date {
+  flex: 1;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
 
-  .user-center-content {
-    grid-template-columns: 1fr;
-  }
+.record-action {
+  color: var(--color-text-secondary);
+}
 
-  .purchase-options {
-    grid-template-columns: 1fr;
-  }
+.record-cost {
+  color: var(--color-error);
+  font-variant-numeric: tabular-nums;
+}
 
-  .quota-actions,
-  .settings-actions,
-  .security-actions,
-  .modal-actions {
-    flex-direction: column;
-  }
-
-  .quota-actions button,
-  .settings-actions button,
-  .security-actions button,
-  .modal-actions button {
-    width: 100%;
+@media (max-width: 760px) {
+  .panel-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

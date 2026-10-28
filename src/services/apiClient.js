@@ -45,9 +45,6 @@ apiClient.interceptors.request.use(
     if (token) {
       // 如果 Token 存在，添加到 Authorization 请求头
       config.headers.Authorization = `Bearer ${token}`
-      console.debug('Token attached:', token) // 增加调试日志
-    } else {
-      console.debug('No token found in localStorage.') // 增加调试日志
     }
     return config
   },
@@ -61,8 +58,9 @@ apiClient.interceptors.request.use(
 // 处理后端返回的响应或错误
 apiClient.interceptors.response.use(
   (response) => {
-    // 如果响应成功 (状态码 2xx)，直接返回响应数据
-    console.debug('Response received:', response.status, response.data) // 增加调试日志
+    // 说明：这里不再 debug 打印完整响应体。
+    // 历史记录接口的返回是上百条记录的对象数组，每次都序列化到控制台
+    // 会给浏览器主线程带来可观测的开销（尤其是轮询期间）。
     return response
   },
   (error) => {
@@ -70,7 +68,6 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       console.error(`Error Response Status: ${status}`, error.response.data) // 记录错误状态和内容
-
       if (status === 401) {
         // --- 处理 401 Unauthorized ---
         // 可能是 Token 过期或无效
@@ -86,23 +83,17 @@ apiClient.interceptors.response.use(
 
       } else if (status >= 400 && status < 500) {
         // --- 处理其他客户端错误 (4xx) ---
-        // 例如 400 Bad Request, 404 Not Found, 403 Forbidden
-        // 通常这些错误表示前端发送的数据有问题或权限不足
-        // 可以考虑在这里显示一个通用的错误提示给用户
-        alert(`客户端错误: ${error.response.data?.detail || error.message}`);
-
+        // 说明：这里不再弹 alert()。阻塞式弹窗会打断用户操作，
+        // 也会让页面在无人值守时卡住；错误信息统一由各页面内的提示条展示
+        // （error.response.data.detail 会被调用方读取）。
       } else if (status >= 500) {
         // --- 处理服务器端错误 (5xx) ---
-        // 例如 500 Internal Server Error
-        // 这通常表示后端代码出错了
-        // 可以考虑显示一个“服务器繁忙”的提示
-        // alert(`服务器错误: ${error.message}`);
+        // 同理，交由页面内的提示条展示，避免阻塞式弹窗。
       }
     } else if (error.request) {
       // --- 处理网络错误 (请求已发出，但没有收到响应) ---
       console.error('Network Error:', error.message)
-      // 可能是后端服务没启动、网络不通等
-      alert('网络连接错误，请检查您的网络或稍后再试。');
+      // 可能是后端服务没启动、网络不通等；错误交由调用方展示
     } else {
       // --- 处理请求设置错误 ---
       // 在设置请求时就发生了错误

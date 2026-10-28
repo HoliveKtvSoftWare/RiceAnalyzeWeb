@@ -40,7 +40,7 @@
           <div class="batch-progress-title">
             <span class="batch-progress-spinner" :class="{ done: analysisStore.batchProgress.completed >= analysisStore.batchProgress.total }"></span>
             <span class="batch-progress-badge">{{ progressTypeLabel }}</span>
-            <span>{{ analysisStore.batchProgress.completed >= analysisStore.batchProgress.total ? '分割完成' : '分割处理中' }}</span>
+            <span>{{ analysisStore.batchProgress.completed >= analysisStore.batchProgress.total ? t('分割完成') : t('分割处理中') }}</span>
           </div>
           <span class="batch-progress-count">
             {{ Math.min(analysisStore.batchProgress.completed, analysisStore.batchProgress.total) }}/{{ analysisStore.batchProgress.total }}
@@ -66,7 +66,9 @@ import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useAuthStore } from '@/stores/auth';
 import { useAnalysisStore } from '@/stores/analysis';
+import { useI18n } from '@/i18n';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const analysisStore = useAnalysisStore();
 const route = useRoute();
@@ -84,7 +86,7 @@ const showPublicHeader = computed(() => {
 
 const progressTypeLabel = computed(() => {
   const map = { stem: '茎秆', flag_leaf: '剑叶' };
-  return map[analysisStore.batchProgress.type] || '';
+  return map[analysisStore.batchProgress.type] ? t(map[analysisStore.batchProgress.type]) : '';
 });
 
 onMounted(async () => {
@@ -93,8 +95,10 @@ onMounted(async () => {
 </script>
 
 <style>
+/* 应用外壳：浅色、无背景图、无毛玻璃 */
 #app-layout {
   min-height: 100vh;
+  background-color: var(--color-background);
 }
 
 .layout-with-sidebar {
@@ -104,18 +108,21 @@ onMounted(async () => {
 }
 
 .main-content-wrapper {
-  flex-grow: 1;
-  margin-left: 200px;
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
   max-height: 100vh;
   overflow: hidden;
-  transition: margin-left var(--transition-normal, 0.3s ease);
+  background-color: var(--color-background);
+  transition: margin-left var(--transition-slow);
 }
 
 .main-content-wrapper.sidebar-collapsed {
-  margin-left: 72px;
+  margin-left: var(--sidebar-width-collapsed);
 }
 
 .public-content-wrapper {
@@ -123,7 +130,6 @@ onMounted(async () => {
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
-  overflow: hidden;
 }
 
 .full-page-wrapper {
@@ -132,174 +138,158 @@ onMounted(async () => {
 }
 
 .page-content {
-  height: 90%;
-  flex-grow: 1;
-  margin: 5px;
-  padding: 5px;
-  border-radius: var(--radius-xl);
-  background-color: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: var(--shadow-lg);
-  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 24px 28px 32px;
   overflow-y: auto;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  box-sizing: border-box;
 }
 
-@keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+@media (max-width: 900px) {
+  .page-content {
+    padding: 16px;
+  }
 }
 
-@keyframes pageFadeOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-8px); }
+/* 页面切换：只做淡入，不做位移，避免整页重绘。
+   注意：布局层（layout-fade）不定义过渡 —— 首屏路由解析时认证分支会切换，
+   若这里加 out-in 过渡，内容会被"离场"动画挡住，出现短暂空白。 */
+.page-fade-enter-active {
+  transition: opacity 140ms ease;
 }
 
-/* ==================== 全局批次分割进度浮层 ==================== */
+.page-fade-leave-active {
+  transition: opacity 90ms ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+
+/* ==================== 全局批次进度：一条细进度条 ==================== */
 .batch-progress-float {
   position: fixed;
-  bottom: 40px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
   pointer-events: none;
 }
 
+.batch-progress-float-enter-active,
+.batch-progress-float-leave-active {
+  transition: opacity 140ms ease;
+}
+
+.batch-progress-float-enter-from,
+.batch-progress-float-leave-to {
+  opacity: 0;
+}
+
 .batch-progress-card {
   pointer-events: auto;
-  min-width: 480px;
-  max-width: 640px;
-  padding: 7px 16px;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: var(--radius-full);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.batch-progress-card.done {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: linear-gradient(135deg, rgba(220, 252, 231, 0.96), rgba(255, 255, 255, 0.96));
-  box-shadow: 0 12px 40px rgba(34, 197, 94, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
+  min-width: 420px;
+  max-width: 560px;
+  padding: 10px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .batch-progress-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.82em;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  white-space: nowrap;
+  gap: 8px;
   flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .batch-progress-badge {
-  padding: 1px 7px;
-  font-size: 0.78em;
-  font-weight: 700;
-  color: white;
-  background: linear-gradient(135deg, var(--color-primary-green-light), var(--color-primary-green));
-  border-radius: 999px;
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-accent-soft);
+  color: var(--color-primary-green-dark);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .batch-progress-spinner {
   width: 12px;
   height: 12px;
-  border: 2px solid rgba(76, 175, 80, 0.22);
+  border: 1.5px solid var(--color-border);
   border-top-color: var(--color-accent);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
   flex-shrink: 0;
 }
 
 .batch-progress-spinner.done {
-  border-color: var(--color-success);
-  animation: none;
-  background: var(--color-success);
   position: relative;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+  border: none;
+  background: var(--color-success);
+  animation: none;
 }
 
 .batch-progress-spinner.done::after {
   content: '';
   position: absolute;
-  left: 2px;
-  top: -1px;
-  width: 4px;
-  height: 8px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
+  left: 3.5px;
+  top: 1.5px;
+  width: 3.5px;
+  height: 6px;
+  border: solid #fff;
+  border-width: 0 1.5px 1.5px 0;
   transform: rotate(45deg);
 }
 
 .batch-progress-count {
-  font-size: 0.78em;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  padding: 1px 8px;
-  background: var(--color-primary-green-bg);
-  border-radius: 50px;
-  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.batch-progress-card.done .batch-progress-count {
-  background: rgba(34, 197, 94, 0.12);
-  color: var(--color-success);
 }
 
 .batch-progress-track {
   flex: 1;
-  width: auto;
-  height: 5px;
-  background: rgba(0, 0, 0, 0.07);
-  border-radius: 999px;
+  min-width: 80px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-hover);
   overflow: hidden;
-  min-width: 60px;
 }
 
 .batch-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-primary-green-light), var(--color-primary-green));
-  border-radius: 999px;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  transition: width var(--transition-slow);
 }
 
 .batch-progress-fill.done {
-  background: linear-gradient(90deg, #22c55e, #16a34a);
+  background: var(--color-success);
 }
 
 .batch-progress-percent {
-  font-size: 0.75em;
-  font-weight: 700;
-  color: var(--color-primary-green-dark);
-  font-variant-numeric: tabular-nums;
-  opacity: 0.75;
   flex-shrink: 0;
-  white-space: nowrap;
-  min-width: 36px;
+  min-width: 34px;
   text-align: right;
-}
-
-@keyframes batchProgressFloatIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(30px) scale(0.9); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-}
-
-@keyframes batchProgressFloatOut {
-  from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-  to { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.95); }
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 </style>

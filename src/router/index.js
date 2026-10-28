@@ -1,11 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import LoginView from '../views/LoginView.vue';
-import RegisterView from '../views/RegisterView.vue';
 import HomeView from '../views/HomeView.vue';
-import StemView from '../views/StemView.vue';
-import FlagLeafView from '../views/FlagLeafView.vue';
-import UserCenterView from '../views/UserCenterView.vue';
 import { useAuthStore } from '@/stores/auth';
+
+// 说明：Home / Login 是首屏必经页面，直接同步引入；
+// 其余页面（StemView 单文件就有 70KB+，含大量样式）改为按需加载，
+// 首屏 JS 体积大幅减小，页面的首次可交互时间明显提前。
+const StemView = () => import('../views/StemView.vue');
+const FlagLeafView = () => import('../views/FlagLeafView.vue');
+const UserCenterView = () => import('../views/UserCenterView.vue');
+const RegisterView = () => import('../views/RegisterView.vue');
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,10 +27,16 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
-      path: '/',
+      // 首页：路由路径为 /home
+      path: '/home',
       name: 'home',
       component: HomeView,
       meta: { requiresAuth: false }
+    },
+    {
+      // 兼容旧地址：访问根路径时跳到 /home
+      path: '/',
+      redirect: '/home'
     },
     {
       path: '/stem',
@@ -55,13 +65,9 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.meta.requiresAuth;
   const isAuthenticated = authStore.isAuthenticated;
 
-  console.debug(`Navigating to ${to.path}. Requires auth: ${requiresAuth}, Is authenticated: ${isAuthenticated}`);
-
   if (requiresAuth && !isAuthenticated) {
-    console.warn(`Redirecting to /login from ${to.path}`);
     next({ name: 'login' });
   } else if (!requiresAuth && isAuthenticated && (to.name === 'login' || to.name === 'register')) {
-    console.debug(`User already authenticated. Redirecting from ${to.path} to /`);
     next({ name: 'home' });
   } else {
     next();
