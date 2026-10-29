@@ -35,7 +35,7 @@
               :value="column.key"
               v-model="selectedColumns"
             />
-            <span class="column-label">{{ t(column.label) }}</span>
+            <span class="column-label">{{ columnLabel(column) }}</span>
           </label>
         </div>
 
@@ -110,12 +110,20 @@ const confirmButtonText = computed(() => {
 });
 
 // Excel下载弹窗相关状态
-const selectedColumns = ref(['filename']);
+const selectedColumns = ref(['filename', 'scalePerPx']);
 const selectedUnit = ref('μm');
 
-// 可下载的数据项配置
+// 比例尺表头跟随导出单位变化：比例尺(µm/px) / 比例尺(mm/px) / 比例尺(cm/px)
+const unitSymbol = computed(() => ({ μm: 'µm', mm: 'mm', cm: 'cm' }[selectedUnit.value] || selectedUnit.value));
+
+const columnLabel = (column) => (column.key === 'scalePerPx'
+  ? t('比例尺({unit}/px)', { unit: unitSymbol.value })
+  : t(column.label));
+
+// 可下载的数据项配置：比例尺紧跟样本名称，导出后也在第二列
 const availableColumns = [
   { key: 'filename', label: '样本名称' },
+  { key: 'scalePerPx', label: '比例尺' },
   { key: 'largeTailCount', label: '大维管束数目' },
   { key: 'smallTailCount', label: '小维管束数目' },
   { key: 'totalCount', label: '总维管束数目' },
@@ -161,7 +169,7 @@ const closeDownloadDialog = () => {
 
 watch(() => props.visible, (val) => {
   if (val) {
-    selectedColumns.value = ['filename'];
+    selectedColumns.value = ['filename', 'scalePerPx'];
     selectedUnit.value = 'μm';
   }
 });

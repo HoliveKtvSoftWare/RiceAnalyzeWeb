@@ -65,6 +65,9 @@ export const useAnalysisStore = defineStore('analysis', () => {
 
   // 正在进行的"历史记录"请求，用于合并并发刷新（见 fetchHistoryAction）
   let historyRequestInFlight = null;
+  // 上次成功拉取历史记录的时间：页面快速来回切换时直接复用，避免记录条反复重载
+  let lastHistoryFetchAt = 0;
+  const HISTORY_FRESH_MS = 15000;
 
   function setBatchName(batchId, name) {
     if (!batchId || !name) return;
@@ -387,6 +390,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
       // 茎秆页只取 task_type=stem 的记录，避免把剑叶记录混进来
       const historyData = await analysisService.getHistory('stem');
       historyList.value = historyData;
+      lastHistoryFetchAt = Date.now();
 
       let mapChanged = false;
       for (const job of historyData) {
@@ -434,6 +438,17 @@ export const useAnalysisStore = defineStore('analysis', () => {
       if (historyRequestInFlight === request) historyRequestInFlight = null;
       if (manageLoading) isLoading.value = false;
     }
+  }
+
+  /**
+   * 页面挂载时使用：数据还新鲜就不重复请求，避免记录条和缩略图重新加载。
+   * 轮询仍然走 fetchHistoryAction，不受这里的节流影响。
+   */
+  async function fetchHistoryIfStale(manageLoading = true, maxAge = HISTORY_FRESH_MS) {
+    if (historyList.value.length > 0 && Date.now() - lastHistoryFetchAt < maxAge) {
+      return historyList.value;
+    }
+    return fetchHistoryAction(manageLoading);
   }
 
   function selectJobAction(job) {
@@ -530,6 +545,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
     uploadFolderAction,
     uploadAnalysisAction,
     fetchHistoryAction,
+    fetchHistoryIfStale,
     fetchModelsAction,
     selectJobAction,
     setError,

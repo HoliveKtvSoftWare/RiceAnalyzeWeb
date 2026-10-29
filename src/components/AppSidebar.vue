@@ -100,6 +100,11 @@ const navItems = ref([
     icon: icon('<path d="M5 19C5 10.5 10 4.5 20 4c.5 9.5-5.5 15-15 15Z" /><path d="M5 19c2.5-4.5 6-8 11-10.5" />'),
   },
   {
+    path: '/data-center',
+    label: '数据中心',
+    icon: icon('<ellipse cx="12" cy="5.5" rx="7" ry="3" /><path d="M5 5.5v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" /><path d="M5 11.5v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />'),
+  },
+  {
     path: '/user-center',
     label: '用户中心',
     icon: icon('<circle cx="12" cy="8.5" r="3.5" /><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6" />'),

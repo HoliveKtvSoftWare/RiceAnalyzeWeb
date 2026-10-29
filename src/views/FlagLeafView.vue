@@ -45,23 +45,60 @@
             <small>{{ t('或点击选择，支持一次多张') }}</small>
           </div>
 
-          <ul v-if="pickedFiles.length" class="chips">
-            <li v-for="(file, index) in pickedFiles" :key="`${file.name}-${index}`" class="chip">
-              <span class="chip-name" :title="file.name">{{ file.name }}</span>
-              <span class="chip-size">{{ (file.size / 1024).toFixed(0) }} KB</span>
-              <button type="button" class="chip-remove" :title="t('移除')" @click="removeFile(index)">×</button>
-            </li>
-          </ul>
+          <button
+            type="button"
+            class="folder-button"
+            :disabled="leafStore.uploading"
+            @click="folderInput?.click()"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H10l2 2h6.5A2.5 2.5 0 0 1 21 10.5v7A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5Z" />
+            </svg>
+            {{ t('选择文件夹') }}
+          </button>
+          <input
+            ref="folderInput"
+            type="file"
+            accept="image/*"
+            multiple
+            webkitdirectory
+            mozdirectory
+            directory
+            hidden
+            @change="onPickFolder"
+          />
+
+          <div v-if="pickedFiles.length" class="chip-group">
+            <span class="chip-group-label">{{ t('单张文件 ({n})', { n: pickedFiles.length }) }}</span>
+            <ul class="chips">
+              <li v-for="(file, index) in pickedFiles" :key="`${file.name}-${index}`" class="chip">
+                <span class="chip-name" :title="file.name">{{ file.name }}</span>
+                <span class="chip-size">{{ (file.size / 1024).toFixed(0) }} KB</span>
+                <button type="button" class="chip-remove" :title="t('移除')" @click="removeFile(index)">×</button>
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="folderFiles.length" class="chip-group">
+            <span class="chip-group-label">{{ t('文件夹文件 ({n})', { n: folderFiles.length }) }}</span>
+            <ul class="chips">
+              <li v-for="(file, index) in folderFiles" :key="`folder-${index}`" class="chip">
+                <span class="chip-name" :title="folderFilePath(file)">{{ folderFilePath(file) }}</span>
+                <span class="chip-size">{{ (file.size / 1024).toFixed(0) }} KB</span>
+                <button type="button" class="chip-remove" :title="t('移除')" @click="removeFolderFile(index)">×</button>
+              </li>
+            </ul>
+          </div>
 
           <button
             type="button"
             class="start-button"
-            :disabled="leafStore.uploading || pickedFiles.length === 0 || !leafStore.currentModel"
+            :disabled="leafStore.uploading || totalPickedFiles === 0 || !leafStore.currentModel"
             @click="startAnalysis"
           >
             {{ leafStore.uploading
               ? t('上传中 {n}%', { n: leafStore.uploadPercent })
-              : (pickedFiles.length ? t('开始分析（{n} 张）', { n: pickedFiles.length }) : t('开始分析')) }}
+              : (totalPickedFiles ? t('开始分析（{n} 张）', { n: totalPickedFiles }) : t('开始分析')) }}
           </button>
 
           <p v-if="!leafStore.models.length && leafStore.modelsLoaded" class="model-hint">
@@ -126,21 +163,31 @@
           </header>
 
           <div class="stage-body">
-            <!-- 单图查看器：原图 / 分割图 用标签页切换（茎秆页是左右双图对照） -->
+            <!-- 单图查看器：原图 / 分割图 用标签页切换 -->
             <div class="viewer">
-              <div class="viewer-tabs">
-                <button
-                  type="button"
-                  :class="{ active: viewTab === 'annotated' }"
-                  :disabled="!leafStore.selectedJob.annotatedImageUrl"
-                  @click="viewTab = 'annotated'"
-                >{{ t('分割图') }}</button>
-                <button
-                  type="button"
-                  :class="{ active: viewTab === 'original' }"
-                  :disabled="!leafStore.selectedJob.originalImageUrl"
-                  @click="viewTab = 'original'"
-                >{{ t('原图') }}</button>
+              <div class="viewer-bar">
+                <div class="viewer-tabs">
+                  <button
+                    type="button"
+                    :class="{ active: viewTab === 'annotated' }"
+                    :disabled="!leafStore.selectedJob.annotatedImageUrl"
+                    @click="viewTab = 'annotated'"
+                  >{{ t('分割图') }}</button>
+                  <button
+                    type="button"
+                    :class="{ active: viewTab === 'original' }"
+                    :disabled="!leafStore.selectedJob.originalImageUrl"
+                    @click="viewTab = 'original'"
+                  >{{ t('原图') }}</button>
+                </div>
+
+                <a
+                  v-if="currentImage"
+                  class="viewer-open"
+                  :href="currentImage"
+                  target="_blank"
+                  rel="noopener"
+                >{{ t('大图 ↗') }}</a>
               </div>
 
               <div
@@ -180,7 +227,9 @@
               <div class="metric-head">
                 <h3>{{ t('结构指标') }}</h3>
                 <span v-if="leafStore.metrics" class="scale-note">
-                  {{ t('比例尺 {n} µm/px', { n: leafStore.metrics.scaleUmPerPx }) }}
+                  {{ scalePerPx !== null
+                    ? t('比例尺 {n} {unit}/px', { n: formatScale(scalePerPx), unit: unitSymbol })
+                    : t('比例尺 {n} µm/px', { n: leafStore.metrics.scaleUmPerPx }) }}
                 </span>
               </div>
 
@@ -233,6 +282,15 @@
                 : t('导出选中 Excel') }}</button>
               <button
                 type="button"
+                :disabled="!leafStore.completedSelected.length || isExportingJson"
+                @click="exportSelectedJson"
+              >{{ isExportingJson
+                ? t('导出中...')
+                : (leafStore.selectedIds.length
+                  ? t('导出选中 JSON（{done}/{total}）', { done: leafStore.completedSelected.length, total: leafStore.selectedIds.length })
+                  : t('导出选中 JSON')) }}</button>
+              <button
+                type="button"
                 class="danger"
                 :disabled="!leafStore.selectedIds.length || leafStore.loading"
                 @click="removeSelected"
@@ -252,7 +310,12 @@
             {{ t('暂无剑叶分析记录，上传第一张切片图开始。') }}
           </p>
 
-          <div v-else class="record-strip">
+          <div
+            v-else
+            ref="recordStripRef"
+            class="record-strip"
+            @wheel="onRecordWheel"
+          >
             <article
               v-for="job in leafStore.history"
               :key="job.analysisId"
@@ -262,10 +325,12 @@
             >
               <div class="thumb">
                 <img
-                  v-if="job.annotatedImageUrl || job.originalPreviewUrl || job.originalImageUrl"
-                  :src="job.annotatedImageUrl || job.originalPreviewUrl || job.originalImageUrl"
+                  v-if="job.thumbnailUrl || job.annotatedImageUrl || job.originalPreviewUrl || job.originalImageUrl"
+                  :src="job.thumbnailUrl || job.annotatedImageUrl || job.originalPreviewUrl || job.originalImageUrl"
                   :alt="job.originalFilename"
                   loading="lazy"
+                  decoding="async"
+                  fetchpriority="low"
                 />
                 <span v-else class="thumb-empty">{{ t('无图') }}</span>
                 <label class="thumb-check" @click.stop>
@@ -332,7 +397,9 @@
         <div class="columns-grid dialog-columns">
           <label v-for="column in columns" :key="column.key" class="column-item">
             <input v-model="draftColumns" type="checkbox" :value="column.key" />
-            <span>{{ column.label }}</span>
+            <span>{{ column.key === 'scalePerPx'
+              ? t('比例尺({unit}/px)', { unit: unitSymbolOf(draftUnit) })
+              : column.label }}</span>
           </label>
         </div>
 
@@ -359,14 +426,20 @@ import { useLeafStore } from '@/stores/leaf';
 import { useExcelStore } from '@/stores/excel';
 import { excelService } from '@/services/excelServerce';
 import { exportService } from '@/services/exportService';
+import { useHorizontalWheelScroll } from '@/composables/useHorizontalWheelScroll';
 
 const leafStore = useLeafStore();
 const excelStore = useExcelStore();
+// 记录条：滚轮横向浏览（与茎秆页共用同一套缓动逻辑）
+const { stripRef: recordStripRef, onWheel: onRecordWheel } = useHorizontalWheelScroll();
 
 const fileInput = ref(null);
 const pickedFiles = ref([]);
+const folderInput = ref(null);
+const folderFiles = ref([]);
 const dragging = ref(false);
 const viewTab = ref('annotated');
+const isExportingJson = ref(false);
 const columns = ref([]);
 const selectedColumns = ref([]);
 // 导出列弹窗：draftColumns 是弹窗里的临时勾选，点“确认导出”才写回 selectedColumns
@@ -383,6 +456,8 @@ const UNIT_OPTIONS = [
 const allRecordsSelected = computed(() =>
   leafStore.history.length > 0 && leafStore.selectedIds.length === leafStore.history.length
 );
+
+const totalPickedFiles = computed(() => pickedFiles.value.length + folderFiles.value.length);
 
 // ---------------- 缩放 ----------------
 const zoom = reactive({
@@ -452,6 +527,21 @@ function onPick(event) {
   event.target.value = '';
 }
 
+/** 文件夹里可能有多层目录，显示相对路径方便区分同名文件 */
+function folderFilePath(file) {
+  return file.webkitRelativePath || file.name;
+}
+
+function onPickFolder(event) {
+  const images = Array.from(event.target.files || []).filter(isImage);
+  folderFiles.value = images;
+  event.target.value = '';
+}
+
+function removeFolderFile(index) {
+  folderFiles.value.splice(index, 1);
+}
+
 function onDrop(event) {
   dragging.value = false;
   addFiles(event.dataTransfer?.files);
@@ -462,12 +552,15 @@ function removeFile(index) {
 }
 
 async function startAnalysis() {
-  const files = pickedFiles.value;
+  const files = [...pickedFiles.value, ...folderFiles.value];
   if (!files.length) return;
   const response = await leafStore.upload(files);
   if (!response) return;
 
   pickedFiles.value = [];
+  folderFiles.value = [];
+  if (fileInput.value) fileInput.value.value = '';
+  if (folderInput.value) folderInput.value.value = '';
   await leafStore.fetchHistory(false);
 
   // 单张上传时自动选中这条记录；批量时选中批次里的第一条
@@ -525,6 +618,28 @@ function formatNumber(value) {
   const number = Number(value);
   if (Math.abs(number) >= 1000) return number.toFixed(1);
   return number.toFixed(2);
+}
+
+// 比例尺随单位换算：优先用恒为 µm/px 的 scaleUmPerPx，切换单位时不会出现旧数值
+const unitSymbolOf = (u) => ({ μm: 'µm', mm: 'mm', cm: 'cm' }[u] || u);
+const unitSymbol = computed(() => unitSymbolOf(leafStore.unit));
+
+const scalePerPx = computed(() => {
+  const m = leafStore.metrics;
+  if (!m) return null;
+  const factor = { μm: 1, mm: 1000, cm: 10000 }[leafStore.unit] || 1;
+  if (m.scaleUmPerPx !== null && m.scaleUmPerPx !== undefined) {
+    return Number(m.scaleUmPerPx) / factor;
+  }
+  if (m.scalePerPx !== null && m.scalePerPx !== undefined) return Number(m.scalePerPx);
+  return null;
+});
+
+function formatScale(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+  const number = Number(value);
+  if (Math.abs(number) >= 1) return Number(number.toFixed(4)).toString();
+  return Number(number.toPrecision(4)).toString();
 }
 
 // 剑叶关键指标：面积 / 周长 / 维管束计数
@@ -604,7 +719,7 @@ function selectAllColumns() {
 }
 
 const CORE_COLUMNS = [
-  'filename', 'scaleUmPerPx', 'sectionArea', 'tissueArea',
+  'filename', 'scalePerPx', 'sectionArea', 'tissueArea',
   'body1Area', 'body2Area', 'side1Area', 'side2Area',
   'body1Perimeter', 'side1Perimeter', 'side2Perimeter',
   'bodyBigCount', 'bodySmallCount', 'cavitySmallCount',
@@ -692,6 +807,32 @@ async function exportJson() {
     await exportService.exportSingleJson(job.analysisId, job.originalFilename);
   } catch (err) {
     leafStore.setError(err.response?.data?.detail || t('导出 JSON 失败。'));
+  }
+}
+
+// 批量导出选中记录的 JSON：单条时直接下载单个文件，多条时打包成 ZIP
+async function exportSelectedJson() {
+  const ids = [...leafStore.completedSelected];
+  if (!ids.length) {
+    leafStore.setError(t('请先勾选已完成的记录'));
+    return;
+  }
+
+  leafStore.setError(null);
+  isExportingJson.value = true;
+  try {
+    if (ids.length === 1) {
+      const job = leafStore.history.find(item => item.analysisId === ids[0]);
+      await exportService.exportSingleJson(ids[0], job?.originalFilename || '');
+    } else {
+      await exportService.batchExportJson(ids);
+    }
+    // 导出成功后取消这批记录的勾选，避免重复导出
+    leafStore.selectedIds = leafStore.selectedIds.filter(id => !ids.includes(id));
+  } catch (err) {
+    leafStore.setError(err.response?.data?.detail || t('导出 JSON 失败。'));
+  } finally {
+    isExportingJson.value = false;
   }
 }
 
@@ -812,12 +953,48 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
+/* 文件夹入口：比主上传框弱一级，避免抢视线 */
+.folder-button {
+  width: 100%;
+  height: 30px;
+  margin-top: 8px;
+  border-style: dashed;
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.folder-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.folder-button:hover:not(:disabled) {
+  border-color: var(--color-primary-green);
+  background: var(--color-primary-green-bg);
+  color: var(--color-primary-green-dark);
+}
+
+.chip-group {
+  margin-top: 10px;
+}
+
+.chip-group-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-light);
+  font-size: 11px;
+}
+
 .chips {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 10px 0 0;
-  padding: 0;
+  max-height: 176px;
+  margin: 0;
+  padding: 0 2px 0 0;
+  overflow-y: auto;
   list-style: none;
 }
 
@@ -1084,6 +1261,20 @@ onUnmounted(() => {
   gap: 8px;
   min-width: 0;
   min-height: 0;
+}
+
+.viewer-bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 30px;
+}
+
+.viewer-open {
+  flex-shrink: 0;
+  font-size: 11px;
 }
 
 .viewer-tabs {
@@ -1565,13 +1756,13 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* 横向卡片条 */
+/* 横向卡片条：不用 scroll-snap，滚轮缓动才能连续滑动而不被逐帧吸回 */
 .record-strip {
   display: flex;
   gap: 10px;
   padding-bottom: 2px;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
 }
 
 .record-card {
@@ -1581,7 +1772,6 @@ onUnmounted(() => {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   cursor: pointer;
-  scroll-snap-align: start;
 }
 
 .record-card.selected {

@@ -79,6 +79,7 @@ const PAGE_TITLES = {
   home: '首页',
   stem: '水稻茎秆分析',
   'flag-leaf': '水稻剑叶分析',
+  'data-center': '数据中心',
   'user-center': '用户中心',
   login: '登录',
   register: '注册',

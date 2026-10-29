@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth';
 // 首屏 JS 体积大幅减小，页面的首次可交互时间明显提前。
 const StemView = () => import('../views/StemView.vue');
 const FlagLeafView = () => import('../views/FlagLeafView.vue');
+const DataCenterView = () => import('../views/DataCenterView.vue');
 const UserCenterView = () => import('../views/UserCenterView.vue');
 const RegisterView = () => import('../views/RegisterView.vue');
 
@@ -48,6 +49,12 @@ const router = createRouter({
       path: '/flag-leaf',
       name: 'flag-leaf',
       component: FlagLeafView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/data-center',
+      name: 'data-center',
+      component: DataCenterView,
       meta: { requiresAuth: true }
     },
     {
