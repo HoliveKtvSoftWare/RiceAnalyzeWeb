@@ -17,7 +17,8 @@ const exportSingleToExcel = (analysisId, originalFilename, selectedColumns, unit
     console.debug(`Exporting single analysis ${analysisId} (${originalFilename}) to Excel...`);
     return apiClient.post(`/excel/${analysisId}`, { selectedColumns, unit, group }, {
         responseType: 'blob',
-        timeout: 30000
+        // Full side-path measurements on CPU can exceed 30 seconds.
+        timeout: group === 'leaf' ? 0 : 30000
     }).then(response => {
         console.debug('Single Excel export successful');
         const filename = downloadBlob(response, 'export.xlsx');
@@ -32,7 +33,7 @@ const batchExportToExcel = (analysisIds, selectedColumns, unit, asyncMode = fals
     console.debug(`Batch exporting ${analysisIds.length} analyses to Excel, asyncMode:`, asyncMode);
     return apiClient.post('/excel/batch', { analysisIds, selectedColumns, unit, asyncMode, group }, {
         responseType: asyncMode ? 'json' : 'blob',
-        timeout: asyncMode ? 10000 : Math.max(30000, analysisIds.length * 2000)
+        timeout: asyncMode ? 10000 : (group === 'leaf' ? 0 : Math.max(30000, analysisIds.length * 2000))
     }).then(response => {
         if (asyncMode) {
             const data = transformKeys(response.data);
@@ -73,6 +74,7 @@ const downloadTaskResult = (taskId) => {
 const pollAndDownloadTask = (taskId, onProgress, interval = 1500) => {
     return new Promise((resolve, reject) => {
         let attempts = 0;
+        let lastProgress = -1;
         const maxAttempts = 300;
         let timer = null;
         let stopped = false;
@@ -97,6 +99,12 @@ const pollAndDownloadTask = (taskId, onProgress, interval = 1500) => {
             }
             try {
                 const status = await getTaskStatus(taskId);
+                // A large batch may run for a long time; only time out when
+                // it has stopped making progress, not while rows are completing.
+                if ((status.progress ?? 0) > lastProgress) {
+                    attempts = 0;
+                    lastProgress = status.progress ?? 0;
+                }
                 onProgress?.({
                     status: status.status,
                     progress: status.progress ?? 0,

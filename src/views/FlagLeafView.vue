@@ -569,8 +569,8 @@ const metricCards = computed(() => {
     { label: t('侧脉1面积'), value: area(metrics.side1Area) },
     { label: t('侧脉2面积'), value: area(metrics.side2Area) },
     { label: t('主脉周长'), value: length(metrics.body1Perimeter) },
-    { label: t('侧脉1周长÷2'), value: length(metrics.side1HalfPerimeter) },
-    { label: t('侧脉2周长÷2'), value: length(metrics.side2HalfPerimeter) },
+    { label: t('侧脉1长度'), value: length(metrics.side1Length) },
+    { label: t('侧脉2长度'), value: length(metrics.side2Length) },
     {
       label: t('主脉大维管束'),
       value: count(metrics.bodyBigCount),
