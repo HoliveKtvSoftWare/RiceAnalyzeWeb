@@ -1,7 +1,7 @@
 import apiClient from './apiClient';
 import { t } from '@/i18n';
 import { downloadBlob } from '@/utils/fileDownload';
-import { transformKeys } from '@/utils/transform';
+import { transformKeys } from '@/utils/caseTransform';
 
 const getExportColumns = (group = 'stem') => {
     console.debug('Fetching export columns configuration...');
@@ -44,26 +44,6 @@ const batchExportToExcel = (analysisIds, selectedColumns, unit, asyncMode = fals
         return { filename };
     }).catch(error => {
         console.error('Failed to batch export Excel:', error.response?.data || error.message);
-        throw error;
-    });
-};
-
-const exportAllToExcel = (selectedColumns, unit, asyncMode = true, group = 'stem') => {
-    console.debug('Exporting all analyses to Excel, asyncMode:', asyncMode);
-    return apiClient.post('/excel/summary', { selectedColumns, unit, asyncMode, group }, {
-        responseType: asyncMode ? 'json' : 'blob',
-        timeout: asyncMode ? 10000 : 120000
-    }).then(response => {
-        if (asyncMode) {
-            const data = transformKeys(response.data);
-            console.debug('Summary export async task submitted, taskId:', data.taskId);
-            return data;
-        }
-        console.debug('Summary Excel export successful (sync)');
-        const filename = downloadBlob(response, 'summary.xlsx');
-        return { filename };
-    }).catch(error => {
-        console.error('Failed to export all Excel:', error.response?.data || error.message);
         throw error;
     });
 };
@@ -151,7 +131,6 @@ export const excelService = {
     getExportColumns,
     exportSingleToExcel,
     batchExportToExcel,
-    exportAllToExcel,
     getTaskStatus,
     downloadTaskResult,
     pollAndDownloadTask,

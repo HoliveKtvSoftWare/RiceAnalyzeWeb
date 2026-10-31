@@ -349,6 +349,18 @@
                   <span class="dot-sep">·</span>
                   <span>{{ formatTime(job.createdAt) }}</span>
                 </span>
+                <span
+                  v-if="job.batchId && batchCountOf(job.batchId) > 1"
+                  class="batch-chip"
+                  :class="{ active: isBatchSelected(job) }"
+                  :title="batchNameOf(job)"
+                  @click.stop="toggleBatchSelection(job)"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H10l2 2h6.5A2.5 2.5 0 0 1 21 10.5v7A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5Z" />
+                  </svg>
+                  <span>{{ batchChipLabel(job) }}</span>
+                </span>
               </div>
             </article>
           </div>
@@ -356,64 +368,15 @@
       </main>
     </div>
 
-    <!-- 导出列选择弹窗：点“导出选中 Excel”后弹出，确认后才真正提交导出 -->
-    <div v-if="showExportDialog" class="dialog-overlay" @click.self="closeExportDialog">
-      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="leaf-export-title">
-        <header class="dialog-head">
-          <h3 id="leaf-export-title">{{ t('选择导出列') }}</h3>
-          <button type="button" class="dialog-close" :aria-label="t('关闭')" @click="closeExportDialog">×</button>
-        </header>
-
-        <p class="dialog-hint">
-          {{ t('将导出 {done} 条已完成记录（已勾选 {checked} 条），单位 {unit}，已选 {sel} / {total} 列。', {
-            done: leafStore.completedSelected.length,
-            checked: leafStore.selectedIds.length,
-            unit: draftUnit,
-            sel: draftColumns.length,
-            total: columns.length,
-          }) }}
-        </p>
-
-        <div class="dialog-units">
-          <span class="dialog-units-label">{{ t('导出单位') }}</span>
-          <div class="unit-options">
-            <button
-              v-for="option in UNIT_OPTIONS"
-              :key="option.value"
-              type="button"
-              class="unit-option"
-              :class="{ active: draftUnit === option.value }"
-              @click="draftUnit = option.value"
-            >{{ option.label }}</button>
-          </div>
-        </div>
-
-        <div class="dialog-tools">
-          <button type="button" class="link-button" @click="draftAllColumns">{{ t('全选') }}</button>
-          <button type="button" class="link-button" @click="draftCoreColumns">{{ t('只看核心') }}</button>
-          <button type="button" class="link-button" @click="draftClearColumns">{{ t('清空') }}</button>
-        </div>
-
-        <div class="columns-grid dialog-columns">
-          <label v-for="column in columns" :key="column.key" class="column-item">
-            <input v-model="draftColumns" type="checkbox" :value="column.key" />
-            <span>{{ column.key === 'scalePerPx'
-              ? t('比例尺({unit}/px)', { unit: unitSymbolOf(draftUnit) })
-              : column.label }}</span>
-          </label>
-        </div>
-
-        <footer class="dialog-actions">
-          <button type="button" @click="closeExportDialog">{{ t('取消') }}</button>
-          <button
-            type="button"
-            class="primary"
-            :disabled="!draftColumns.length || !leafStore.completedSelected.length || excelStore.isLoading"
-            @click="confirmExport"
-          >{{ excelStore.isLoading ? t('导出中…') : t('确认导出') }}</button>
-        </footer>
-      </div>
-    </div>
+    <!-- 导出列选择弹窗（与茎秆页共用） -->
+    <ExportColumnsDialog
+      :visible="showExportDialog"
+      group="leaf"
+      :core-selected="LEAF_CORE_COLUMNS"
+      :busy="excelStore.isLoading"
+      @close="closeExportDialog"
+      @confirm="handleExportConfirm"
+    />
   </div>
 </template>
 
@@ -422,14 +385,25 @@ import { useI18n } from '@/i18n';
 
 const { t } = useI18n();
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { useLeafStore } from '@/stores/leaf';
-import { useExcelStore } from '@/stores/excel';
-import { excelService } from '@/services/excelServerce';
+import { useLeafAnalysisStore } from '@/stores/leafAnalysis';
+import { useExcelExportStore } from '@/stores/excelExport';
 import { exportService } from '@/services/exportService';
+import ExportColumnsDialog from '@/components/ExportColumnsDialog.vue';
 import { useHorizontalWheelScroll } from '@/composables/useHorizontalWheelScroll';
+import { useBatchSelection } from '@/composables/useBatchSelection';
+import {
+  cardName,
+  cleanName,
+  formatNumber,
+  formatScale,
+  formatTime,
+  scalePerPxOf,
+  statusLabel,
+  unitSymbolOf,
+} from '@/utils/sampleDisplay';
 
-const leafStore = useLeafStore();
-const excelStore = useExcelStore();
+const leafStore = useLeafAnalysisStore();
+const excelStore = useExcelExportStore();
 // 记录条：滚轮横向浏览（与茎秆页共用同一套缓动逻辑）
 const { stripRef: recordStripRef, onWheel: onRecordWheel } = useHorizontalWheelScroll();
 
@@ -440,24 +414,28 @@ const folderFiles = ref([]);
 const dragging = ref(false);
 const viewTab = ref('annotated');
 const isExportingJson = ref(false);
-const columns = ref([]);
-const selectedColumns = ref([]);
-// 导出列弹窗：draftColumns 是弹窗里的临时勾选，点“确认导出”才写回 selectedColumns
 const showExportDialog = ref(false);
-const draftColumns = ref([]);
-// 弹窗里的导出单位（只影响这一次导出，不改变页面上的指标单位）
-const draftUnit = ref('μm');
-const UNIT_OPTIONS = [
-  { value: 'μm', label: 'µm' },
-  { value: 'mm', label: 'mm' },
-  { value: 'cm', label: 'cm' },
-];
+// single：舞台标题栏的单条导出；batch：记录栏的批量导出
+const exportMode = ref('batch');
 
 const allRecordsSelected = computed(() =>
   leafStore.history.length > 0 && leafStore.selectedIds.length === leafStore.history.length
 );
 
 const totalPickedFiles = computed(() => pickedFiles.value.length + folderFiles.value.length);
+
+// ---------------- 批次分组（与茎秆页一致） ----------------
+const {
+  batchCountOf,
+  batchNameOf,
+  batchChipLabel,
+  isBatchSelected,
+  toggleBatchSelection,
+} = useBatchSelection({
+  jobs: computed(() => leafStore.history),
+  getSelectedIds: () => leafStore.selectedIds,
+  setSelectedIds: (ids) => { leafStore.selectedIds = ids; },
+});
 
 // ---------------- 缩放 ----------------
 const zoom = reactive({
@@ -570,77 +548,9 @@ async function startAnalysis() {
 }
 
 // ---------------- 展示辅助 ----------------
-// 这里存中文原文，t() 放在读取时调用，切换语言才能即时生效
-const STATUS_TEXT = {
-  processing: '处理中',
-  completed: '已完成',
-  failed: '失败',
-  pending: '等待中',
-  queued: '排队中',
-};
-
-function statusLabel(status) {
-  return t(STATUS_TEXT[status] || status || '未知');
-}
-
-/** 去掉上传时加的 uuid 前缀（保留原文件名与时间戳） */
-function stripUuidPrefix(name) {
-  return String(name).replace(
-    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[_-]/,
-    ''
-  );
-}
-
-/** 标题用的名字：uuid、扩展名、时间戳都去掉，只留原始文件名 */
-function cleanName(name) {
-  if (!name) return t('未命名样本');
-  return stripUuidPrefix(name)
-    .replace(/\.\w+$/, '')
-    .replace(/_\d{8}_\d{6}$/, '');
-}
-
-/** 记录卡片用的名字：保留上传时间戳（去掉扩展名），方便区分同名文件 */
-function cardName(name) {
-  if (!name) return t('未命名样本');
-  return stripUuidPrefix(name).replace(/\.\w+$/, '');
-}
-
-function formatTime(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function formatNumber(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
-  const number = Number(value);
-  if (Math.abs(number) >= 1000) return number.toFixed(1);
-  return number.toFixed(2);
-}
-
-// 比例尺随单位换算：优先用恒为 µm/px 的 scaleUmPerPx，切换单位时不会出现旧数值
-const unitSymbolOf = (u) => ({ μm: 'µm', mm: 'mm', cm: 'cm' }[u] || u);
+// 比例尺随单位换算：统一走公共工具
 const unitSymbol = computed(() => unitSymbolOf(leafStore.unit));
-
-const scalePerPx = computed(() => {
-  const m = leafStore.metrics;
-  if (!m) return null;
-  const factor = { μm: 1, mm: 1000, cm: 10000 }[leafStore.unit] || 1;
-  if (m.scaleUmPerPx !== null && m.scaleUmPerPx !== undefined) {
-    return Number(m.scaleUmPerPx) / factor;
-  }
-  if (m.scalePerPx !== null && m.scalePerPx !== undefined) return Number(m.scalePerPx);
-  return null;
-});
-
-function formatScale(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
-  const number = Number(value);
-  if (Math.abs(number) >= 1) return Number(number.toFixed(4)).toString();
-  return Number(number.toPrecision(4)).toString();
-}
+const scalePerPx = computed(() => scalePerPxOf(leafStore.metrics, leafStore.unit));
 
 // 剑叶关键指标：面积 / 周长 / 维管束计数
 const metricCards = computed(() => {
@@ -713,37 +623,6 @@ async function removeSelected() {
   await leafStore.removeBatch(ids);
 }
 
-// ---------------- 导出 ----------------
-function selectAllColumns() {
-  selectedColumns.value = columns.value.map(column => column.key);
-}
-
-const CORE_COLUMNS = [
-  'filename', 'scalePerPx', 'sectionArea', 'tissueArea',
-  'body1Area', 'body2Area', 'side1Area', 'side2Area',
-  'body1Perimeter', 'side1Perimeter', 'side2Perimeter',
-  'bodyBigCount', 'bodySmallCount', 'cavitySmallCount',
-  'side1BigCount', 'side1SmallCount', 'side2BigCount', 'side2SmallCount',
-];
-
-async function loadColumns() {
-  try {
-    const data = await excelService.getExportColumns('leaf');
-    columns.value = Object.entries(data.available_columns || {}).map(([key, label]) => ({ key, label }));
-    if (!selectedColumns.value.length) selectAllColumns();
-  } catch (err) {
-    console.error('Load leaf export columns failed:', err);
-  }
-}
-
-async function exportSingle() {
-  const job = leafStore.selectedJob;
-  if (!job) return;
-  await excelStore.downloadSingleExcelAction(
-    job.analysisId, job.originalFilename, selectedColumns.value, leafStore.unit, 'leaf'
-  );
-}
-
 // ---- 记录多选：全选 / 取消全选 ----
 function toggleSelectAll() {
   if (allRecordsSelected.value) {
@@ -759,14 +638,19 @@ function toggleSelectAll() {
   }
 }
 
-// ---- 导出列弹窗 ----
-async function openExportDialog() {
+// ---------------- 导出 ----------------
+// “只看核心”使用的列；实际可导出列由弹窗从后端接口加载
+const LEAF_CORE_COLUMNS = [
+  'filename', 'scalePerPx', 'sectionArea', 'tissueArea',
+  'body1Area', 'body2Area', 'side1Area', 'side2Area',
+  'body1Perimeter', 'side1Perimeter', 'side2Perimeter',
+  'bodyBigCount', 'bodySmallCount', 'cavitySmallCount',
+  'side1BigCount', 'side1SmallCount', 'side2BigCount', 'side2SmallCount',
+];
+
+function openExportDialog() {
   if (!leafStore.selectedIds.length) return;
-  // 列配置还没拉回来时先补一次，避免弹窗里是空列表
-  if (!columns.value.length) await loadColumns();
-  if (!selectedColumns.value.length) selectAllColumns();
-  draftColumns.value = [...selectedColumns.value];
-  draftUnit.value = leafStore.unit;
+  exportMode.value = 'batch';
   showExportDialog.value = true;
 }
 
@@ -774,30 +658,30 @@ function closeExportDialog() {
   showExportDialog.value = false;
 }
 
-function draftAllColumns() {
-  draftColumns.value = columns.value.map(column => column.key);
+function exportSingle() {
+  const job = leafStore.selectedJob;
+  if (!job) return;
+  exportMode.value = 'single';
+  showExportDialog.value = true;
 }
 
-function draftCoreColumns() {
-  draftColumns.value = [...CORE_COLUMNS];
-}
-
-function draftClearColumns() {
-  draftColumns.value = [];
-}
-
-async function confirmExport() {
-  if (!draftColumns.value.length) return;
-  const ids = leafStore.completedSelected;
-  if (!ids.length) {
-    leafStore.setError(t('选中的记录里没有已完成的样本，无法导出。'));
-    return;
+async function handleExportConfirm({ columns, unit }) {
+  if (exportMode.value === 'single') {
+    const job = leafStore.selectedJob;
+    if (!job) return;
+    await excelStore.downloadSingleExcelAction(
+      job.analysisId, job.originalFilename, columns, unit, 'leaf'
+    );
+  } else {
+    const ids = leafStore.completedSelected;
+    if (!ids.length) {
+      leafStore.setError(t('选中的记录里没有已完成的样本，无法导出。'));
+      closeExportDialog();
+      return;
+    }
+    await excelStore.downloadBatchExcelAction(ids, columns, unit, 'leaf');
   }
-  // 记住这次的选择，下次打开弹窗沿用
-  selectedColumns.value = [...draftColumns.value];
-  const exportUnit = draftUnit.value;
-  showExportDialog.value = false;
-  await excelStore.downloadBatchExcelAction(ids, selectedColumns.value, exportUnit, 'leaf');
+  closeExportDialog();
 }
 
 async function exportJson() {
@@ -841,7 +725,6 @@ onMounted(async () => {
   await Promise.allSettled([
     leafStore.fetchModels(),
     leafStore.fetchHistory(),
-    loadColumns(),
   ]);
   if (!leafStore.selectedJob) {
     const first = leafStore.history.find(job => job.status === 'completed') || leafStore.history[0];
@@ -850,7 +733,8 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  leafStore.stopPolling();
+  // 不停止 leafStore 的轮询：分析进行中切到其它页面时，底部全局进度条仍要持续更新；
+  // 没有进行中的任务时 ensurePolling 会自然停下。
   onMouseUp();
 });
 </script>
@@ -1576,158 +1460,6 @@ onUnmounted(() => {
 }
 
 /* ========== 导出列弹窗 ========== */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(24, 24, 27, 0.32);
-  animation: fadeIn 140ms ease both;
-}
-
-.dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: min(560px, 100%);
-  max-height: min(82vh, 640px);
-  padding: 16px 18px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-xl);
-  animation: fadeInScale 160ms ease both;
-}
-
-.dialog-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.dialog-head h3 {
-  margin: 0;
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-.dialog-close {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text-light);
-  font-size: 15px;
-  line-height: 1;
-}
-
-.dialog-close:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text-primary);
-}
-
-.dialog-hint {
-  color: var(--color-text-muted);
-  font-size: 11.5px;
-  line-height: 1.6;
-}
-
-/* 导出单位选择 */
-.dialog-units {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.dialog-units-label {
-  color: var(--color-text-muted);
-  font-size: 11.5px;
-}
-
-.unit-options {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-hover);
-}
-
-.unit-option {
-  height: 22px;
-  padding: 0 10px;
-  border: none;
-  border-radius: var(--radius-full);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 11.5px;
-}
-
-.unit-option.active {
-  background: var(--color-surface);
-  box-shadow: var(--shadow-xs);
-  color: var(--color-text-primary);
-}
-
-.dialog-tools {
-  display: inline-flex;
-  gap: 12px;
-}
-
-/* 覆盖 .columns-grid 的基础高度限制（弹窗里可以滚更长） */
-.dialog .columns-grid {
-  max-height: 320px;
-  padding-right: 4px;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--color-border-light);
-}
-
-.dialog-actions button {
-  height: 30px;
-  padding: 0 14px;
-  font-size: 12px;
-}
-
-.link-button {
-  height: auto;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-primary-green-dark);
-  font-size: 11.5px;
-}
-
-.link-button:hover {
-  text-decoration: underline;
-}
-
-.columns-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 4px 10px;
-  max-height: 150px;
-  overflow-y: auto;
-}
-
-.column-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--color-text-secondary);
-  font-size: 11.5px;
-}
-
 .export-progress {
   display: flex;
   align-items: center;
@@ -1856,6 +1588,46 @@ onUnmounted(() => {
 
 .dot-sep {
   color: var(--color-border-strong);
+}
+
+/* 批次角标：点击整批勾选，与茎秆页一致 */
+.batch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 1px;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted);
+  color: var(--color-text-light);
+  font-size: 10px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.batch-chip svg {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+}
+
+.batch-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-chip:hover {
+  border-color: var(--color-primary-green-light);
+  color: var(--color-primary-green-dark);
+}
+
+.batch-chip.active {
+  border-color: var(--color-primary-green-lightest);
+  background: var(--color-primary-green-bg);
+  color: var(--color-primary-green-dark);
 }
 
 /* 错误横幅 */

@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia';
 import { t } from '@/i18n';
 import { ref } from 'vue';
-import { excelService } from '@/services/excelServerce';
+import { excelService } from '@/services/excelService';
 
 const ASYNC_THRESHOLD = 1;
 
-export const useExcelStore = defineStore('excel', () => {
+export const useExcelExportStore = defineStore('excelExport', () => {
     const isLoading = ref(false);
     const error = ref(null);
 
@@ -93,29 +93,6 @@ export const useExcelStore = defineStore('excel', () => {
         }
     }
 
-    async function downloadExcelSummaryAction(selectedColumns, unit, group = 'stem') {
-        isLoading.value = true;
-        setError(null);
-        resetProgress();
-        taskMessage.value = t('正在提交导出任务...');
-
-        try {
-            const { taskId } = await excelService.exportAllToExcel(selectedColumns, unit, true, group);
-            taskMessage.value = t('汇总导出任务已提交，处理中...');
-            await excelService.pollAndDownloadTask(taskId, onProgressUpdate, 1500);
-            console.log('Summary Excel downloaded');
-            return true;
-        } catch (err) {
-            console.error('Download Excel summary failed:', err);
-            const detail = err.response?.data?.detail || err.message || t('下载Excel总表失败。');
-            setError(detail);
-            return false;
-        } finally {
-            isLoading.value = false;
-            resetProgress();
-        }
-    }
-
     return {
         isLoading,
         error,
@@ -125,6 +102,5 @@ export const useExcelStore = defineStore('excel', () => {
         setError,
         downloadSingleExcelAction,
         downloadBatchExcelAction,
-        downloadExcelSummaryAction,
     };
 });

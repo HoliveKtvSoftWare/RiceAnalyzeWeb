@@ -1,18 +1,22 @@
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const isDev = mode !== 'production'
 
   return {
-    // 把构建时间注入到前端，侧边栏会显示它 —— 用来判断浏览器里跑的是不是最新产物
+    // 把构建时间与版本号注入到前端，侧边栏显示它们 —— 用来判断浏览器里跑的是不是最新产物
     // （排查"改了代码但页面没变"这类缓存问题时非常直接）。
     define: {
       __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+      __APP_VERSION__: JSON.stringify(pkg.version),
     },
     plugins: [
       vue(),

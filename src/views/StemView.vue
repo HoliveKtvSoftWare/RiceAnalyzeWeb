@@ -471,14 +471,14 @@
       </main>
     </div>
 
-    <!-- Excel 下载数据项选择弹窗 -->
-    <ExcelDownload
+    <!-- Excel 导出列选择弹窗（与剑叶页共用） -->
+    <ExportColumnsDialog
       :visible="showDownloadDialog"
-      :download-type="currentDownloadType"
-      :job="dialogJob"
-      :selected-count="selectedAnalysisIds.length"
+      group="stem"
+      :default-selected="['filename', 'scalePerPx']"
+      :busy="excelStore.isLoading"
       @close="closeDownloadDialog"
-      @download="handleExcelDownload"
+      @confirm="handleExportConfirm"
     />
 
     <!-- Toast 提示 -->
@@ -500,16 +500,28 @@ import { useI18n } from '@/i18n';
 
 const { t } = useI18n();
 import { ref, reactive, watch, computed, nextTick, onMounted, onUnmounted } from 'vue';
-import { useAnalysisStore } from '@/stores/analysis';
-import { useExcelStore } from '@/stores/excel';
+import { useStemAnalysisStore } from '@/stores/stemAnalysis';
+import { useExcelExportStore } from '@/stores/excelExport';
 import { analysisService } from '@/services/analysisService';
 import { exportService } from '@/services/exportService';
-import ExcelDownload from '@/components/ExcelDownload.vue';
+import ExportColumnsDialog from '@/components/ExportColumnsDialog.vue';
 import { useHorizontalWheelScroll } from '@/composables/useHorizontalWheelScroll';
+import { useBatchSelection } from '@/composables/useBatchSelection';
+import {
+  cardName,
+  cleanName,
+  displayModelUsed,
+  formatNumber,
+  formatScale,
+  formatTime,
+  scalePerPxOf,
+  statusLabel,
+  unitSymbolOf,
+} from '@/utils/sampleDisplay';
 import { beginCriticalOperation, endCriticalOperation } from '@/services/apiClient';
 
-const analysisStore = useAnalysisStore();
-const excelStore = useExcelStore();
+const analysisStore = useStemAnalysisStore();
+const excelStore = useExcelExportStore();
 
 const history = computed(() => analysisStore.historyList);
 const processingJobs = computed(() => history.value.filter(job => job.status === 'processing'));
@@ -676,34 +688,10 @@ function onUnitChange(event) {
   }
 }
 
-function formatNumber(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
-  const number = Number(value);
-  if (Math.abs(number) >= 1000) return number.toFixed(1);
-  return number.toFixed(2);
-}
+// 比例尺随单位换算：统一走公共工具，切换单位时优先用恒为 µm/px 的值换算
+const unitSymbol = computed(() => unitSymbolOf(unit.value));
 
-// 比例尺随单位换算：后端 scalePerPx 已是当前单位，旧接口则从 µm/px 换算
-const unitSymbol = computed(() => ({ μm: 'µm', mm: 'mm', cm: 'cm' }[unit.value] || unit.value));
-
-const scalePerPx = computed(() => {
-  const m = metrics.value;
-  if (!m) return null;
-  const factor = { μm: 1, mm: 1000, cm: 10000 }[unit.value] || 1;
-  // scaleUmPerPx 恒为 µm/px，优先用它换算；避免切换单位时出现“旧数值 + 新单位”
-  if (m.scaleUmPerPx !== null && m.scaleUmPerPx !== undefined) {
-    return Number(m.scaleUmPerPx) / factor;
-  }
-  if (m.scalePerPx !== null && m.scalePerPx !== undefined) return Number(m.scalePerPx);
-  return null;
-});
-
-function formatScale(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
-  const number = Number(value);
-  if (Math.abs(number) >= 1) return Number(number.toFixed(4)).toString();
-  return Number(number.toPrecision(4)).toString();
-}
+const scalePerPx = computed(() => scalePerPxOf(metrics.value, unit.value));
 
 // 茎秆指标：与导出 Excel 的 15 项口径一致
 const metricCards = computed(() => {
@@ -782,43 +770,18 @@ function toggleSelectAll() {
 const { stripRef: recordStripRef, onWheel: onRecordWheel } = useHorizontalWheelScroll();
 
 // ---------- 批次分组 ----------
-const batchCountMap = computed(() => {
-  const map = {};
-  for (const job of history.value) {
-    if (job.batchId) map[job.batchId] = (map[job.batchId] || 0) + 1;
-  }
-  return map;
+const {
+  batchCountOf,
+  batchNameOf,
+  batchChipLabel,
+  isBatchSelected,
+  toggleBatchSelection,
+} = useBatchSelection({
+  jobs: history,
+  getSelectedIds: () => selectedAnalysisIds.value,
+  setSelectedIds: (ids) => { selectedAnalysisIds.value = ids; },
+  resolveBatchName: (job) => analysisStore.getBatchName(job.batchId),
 });
-
-const batchCountOf = (batchId) => (batchId ? batchCountMap.value[batchId] || 0 : 0);
-
-const batchNameOf = (job) => {
-  if (!job) return '';
-  return job.batchName || (job.batchId ? analysisStore.getBatchName(job.batchId) : '') || '';
-};
-
-const batchChipLabel = (job) => {
-  const name = batchNameOf(job);
-  return name || t('批次 {n} 张', { n: batchCountOf(job.batchId) });
-};
-
-const batchJobIds = (batchId) =>
-  history.value.filter(job => job.batchId === batchId).map(job => job.analysisId);
-
-const isBatchSelected = (job) => {
-  const ids = batchJobIds(job.batchId);
-  return ids.length > 0 && ids.every(id => selectedAnalysisIds.value.includes(id));
-};
-
-function toggleBatchSelection(job) {
-  const ids = batchJobIds(job.batchId);
-  if (!ids.length) return;
-  if (isBatchSelected(job)) {
-    selectedAnalysisIds.value = selectedAnalysisIds.value.filter(id => !ids.includes(id));
-  } else {
-    selectedAnalysisIds.value = Array.from(new Set([...selectedAnalysisIds.value, ...ids]));
-  }
-}
 
 // 历史刷新后清掉已经不存在的勾选
 watch(history, (list) => {
@@ -1025,20 +988,18 @@ function exportCurrentExcel() {
   showDownloadDialog.value = true;
 }
 
-async function handleExcelDownload(downloadData) {
+async function handleExportConfirm({ columns, unit }) {
   let success = false;
-  if (downloadData.type === 'single') {
-    const job = history.value.find(j => j.analysisId === downloadData.jobId) || analysisStore.selectedJob;
+  if (currentDownloadType.value === 'single') {
+    const job = dialogJob.value || analysisStore.selectedJob;
     if (!job) return;
     success = await excelStore.downloadSingleExcelAction(
-      job.analysisId, job.originalFilename, downloadData.columns, downloadData.unit
+      job.analysisId, job.originalFilename, columns, unit, 'stem'
     );
-  } else if (downloadData.type === 'batch') {
+  } else {
     success = await excelStore.downloadBatchExcelAction(
-      getCompletedSelectedIds(), downloadData.columns, downloadData.unit
+      getCompletedSelectedIds(), columns, unit, 'stem'
     );
-  } else if (downloadData.type === 'summary') {
-    success = await excelStore.downloadExcelSummaryAction(downloadData.columns, downloadData.unit);
   }
   if (success) showToast(t('导出成功'), 'success');
 }
@@ -1217,72 +1178,6 @@ function onMouseUp() {
   zoom.dragging = false;
   window.removeEventListener('mousemove', onMouseMove);
   window.removeEventListener('mouseup', onMouseUp);
-}
-
-// ---------------- 展示辅助 ----------------
-function stripTimestamp(filename) {
-  if (!filename) return '';
-  const dotIdx = filename.lastIndexOf('.');
-  const ext = dotIdx > 0 ? filename.slice(dotIdx) : '';
-  let base = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
-  base = base
-    .replace(/_\d{14}$/, '')
-    .replace(/_\d{8}_\d{6}$/, '')
-    .replace(/_\d{13}$/, '')
-    .replace(/_\d{10}$/, '')
-    .replace(/\s*-\s*\d{14}$/, '')
-    .replace(/\s*-\s*\d{8}_\d{6}$/, '')
-    .replace(/\s*-\s*\d{13}$/, '')
-    .replace(/\s*-\s*\d{10}$/, '');
-  return base + ext;
-}
-
-/** 去掉上传时加的 uuid 前缀 */
-function stripUuidPrefix(name) {
-  return String(name).replace(
-    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[_-]/,
-    ''
-  );
-}
-
-/** 标题用的名字：uuid、扩展名、时间戳都去掉 */
-function cleanName(name) {
-  if (!name) return t('未命名样本');
-  return stripTimestamp(stripUuidPrefix(name)).replace(/\.\w+$/, '');
-}
-
-/** 记录卡片用的名字：保留上传时间戳（去掉扩展名），方便区分同名文件 */
-function cardName(name) {
-  if (!name) return t('未命名样本');
-  return stripUuidPrefix(name).replace(/\.\w+$/, '');
-}
-
-const STATUS_TEXT = {
-  processing: '处理中',
-  completed: '已完成',
-  failed: '失败',
-  queued: '排队中',
-  pending: '待处理',
-  uploading: '处理中',
-};
-
-function statusLabel(status) {
-  return t(STATUS_TEXT[status] || status || '未知');
-}
-
-/** 翻译 modelUsed 字段（三种值：实际名 / "default" / null） */
-function displayModelUsed(val) {
-  if (!val) return null;
-  if (val === 'default') return t('默认模型');
-  return val;
-}
-
-function formatTime(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 // ---------------- 生命周期 ----------------

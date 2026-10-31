@@ -2,13 +2,14 @@ import { defineStore } from 'pinia';
 import { t } from '@/i18n';
 import { computed, ref } from 'vue';
 import { analysisService } from '@/services/analysisService';
+import { useStemAnalysisStore } from '@/stores/stemAnalysis';
 
 // 剑叶页面的 store：所有请求都带 group=leaf，与茎秆页的数据完全隔离。
 // 茎秆页继续用自己的 analysis store，两边互不影响。
 const GROUP = 'leaf';
 const POLL_INTERVAL = 1500;
 
-export const useLeafStore = defineStore('leaf', () => {
+export const useLeafAnalysisStore = defineStore('leafAnalysis', () => {
   // ---- 模型 ----
   const models = ref([]);
   const defaultModel = ref(null);
@@ -87,11 +88,30 @@ export const useLeafStore = defineStore('leaf', () => {
   }
 
   // ---------------- 历史记录 ----------------
+  /**
+   * 把剑叶批次的完成情况同步到全局进度浮层（App.vue 底部那条）。
+   * 茎秆批次由 analysis store 自己同步，这里只处理 type = flag_leaf。
+   */
+  function syncBatchProgress(list) {
+    const analysisStore = useStemAnalysisStore();
+    const progress = analysisStore.batchProgress;
+    if (!progress.visible || progress.type !== 'flag_leaf') return;
+
+    let jobs = list;
+    if (progress.batchId) {
+      const filtered = list.filter(job => job.batchId === progress.batchId);
+      if (filtered.length > 0) jobs = filtered;
+    }
+    const completed = jobs.filter(job => job.status !== 'processing' && job.status !== 'queued').length;
+    analysisStore.setBatchProgressCompleted(completed);
+  }
+
   async function fetchHistory(manageLoading = true) {
     if (manageLoading) loading.value = true;
     try {
       const list = await analysisService.getHistory(GROUP);
       history.value = list;
+      syncBatchProgress(list);
 
       // 保持选中项与最新数据同步（状态会从 processing 变成 completed）
       if (selectedJob.value) {
@@ -185,6 +205,13 @@ export const useLeafStore = defineStore('leaf', () => {
         GROUP
       );
       await fetchHistory(false);
+
+      // 上传成功后立刻在页面底部显示批次进度，后续由 fetchHistory 持续同步
+      const analysisStore = useStemAnalysisStore();
+      const batchId = response?.batchId || response?.batch_id || null;
+      analysisStore.startBatchProgressPolling('flag_leaf', files.length, batchId);
+      syncBatchProgress(history.value);
+
       return response;
     } catch (err) {
       const detail = err.response?.data?.detail || err.message || t('上传剑叶图片失败。');

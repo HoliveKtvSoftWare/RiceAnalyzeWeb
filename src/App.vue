@@ -65,12 +65,12 @@ import { RouterView, useRoute } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useAuthStore } from '@/stores/auth';
-import { useAnalysisStore } from '@/stores/analysis';
+import { useStemAnalysisStore } from '@/stores/stemAnalysis';
 import { useI18n } from '@/i18n';
 
 const { t } = useI18n();
 const authStore = useAuthStore();
-const analysisStore = useAnalysisStore();
+const analysisStore = useStemAnalysisStore();
 const route = useRoute();
 
 const sidebarRef = ref(null);

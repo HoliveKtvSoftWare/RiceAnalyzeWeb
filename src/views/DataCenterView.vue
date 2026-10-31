@@ -147,8 +147,8 @@
       <div class="console-body">
         <div class="console-main">
           <Transition name="data-panel" mode="out-in">
-            <StemData v-if="activeGroup === 'stem'" key="stem" />
-            <FlagLeafData v-else key="leaf" />
+            <StemDataPanel v-if="activeGroup === 'stem'" key="stem" />
+            <FlagLeafDataPanel v-else key="leaf" />
           </Transition>
         </div>
 
@@ -177,8 +177,8 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from '@/i18n';
 import { useDataCenterStore } from '@/stores/dataCenter';
-import StemData from '@/components/data-center/StemData.vue';
-import FlagLeafData from '@/components/data-center/FlagLeafData.vue';
+import StemDataPanel from '@/components/data-center/StemDataPanel.vue';
+import FlagLeafDataPanel from '@/components/data-center/FlagLeafDataPanel.vue';
 import SelectedMetricsPanel from '@/components/data-center/SelectedMetricsPanel.vue';
 
 const { t } = useI18n();

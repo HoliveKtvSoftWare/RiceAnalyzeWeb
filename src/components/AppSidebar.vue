@@ -48,7 +48,7 @@
 
     <div class="sidebar-footer">
       <span class="footer-version" :title="buildTitle">
-        v1.0.0<span v-if="buildLabel" class="footer-build"> · {{ buildLabel }}</span>
+        v{{ appVersion }}<span v-if="buildLabel" class="footer-build"> · {{ buildLabel }}</span>
       </span>
     </div>
   </aside>
@@ -64,7 +64,8 @@ const emit = defineEmits(['toggle-collapse']);
 
 const collapsed = ref(false);
 
-// 构建时间（vite.config.js 通过 define 注入），用于确认浏览器加载的是最新产物
+// 构建时间 / 版本号（vite.config.js 通过 define 注入）
+const appVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '';
 const rawBuildTime = typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : '';
 const buildLabel = (() => {
   if (!rawBuildTime) return '';

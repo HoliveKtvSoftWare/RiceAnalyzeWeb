@@ -17,6 +17,7 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         __BUILD_TIME__: 'readonly',
+        __APP_VERSION__: 'readonly',
       },
     },
   },

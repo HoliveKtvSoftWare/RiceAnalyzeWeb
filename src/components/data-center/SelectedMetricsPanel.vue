@@ -90,8 +90,8 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from '@/i18n';
 import { analysisService } from '@/services/analysisService';
-import { excelService } from '@/services/excelServerce';
-import { useExcelStore } from '@/stores/excel';
+import { excelService } from '@/services/excelService';
+import { useExcelExportStore } from '@/stores/excelExport';
 
 const { t } = useI18n();
 
@@ -112,7 +112,7 @@ const UNIT = 'μm';
 const UNIT_SYMBOL = 'µm';
 const PREVIEW_LIMIT = 6;
 
-const excelStore = useExcelStore();
+const excelStore = useExcelExportStore();
 
 const METRIC_DEFINITIONS = {
   stem: [

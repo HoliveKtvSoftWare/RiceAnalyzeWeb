@@ -87,8 +87,8 @@ export const useAuthStore = defineStore('auth', () => {
     console.log('Logging out...');
     // 清除全局分割进度
     try {
-      const { useAnalysisStore } = await import('@/stores/analysis');
-      useAnalysisStore().clearBatchProgress();
+      const { useStemAnalysisStore } = await import('@/stores/stemAnalysis');
+      useStemAnalysisStore().clearBatchProgress();
     } catch { /* 忽略清理失败 */ }
     // 清除 Pinia store 中的状态
     token.value = null;

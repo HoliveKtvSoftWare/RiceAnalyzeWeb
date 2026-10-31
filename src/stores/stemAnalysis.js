@@ -54,7 +54,7 @@ function saveBatchProgress(progress) {
   } catch { /* localStorage unavailable */ }
 }
 
-export const useAnalysisStore = defineStore('analysis', () => {
+export const useStemAnalysisStore = defineStore('stemAnalysis', () => {
   const isLoading = ref(false);
   const error = ref(null);
   const historyList = ref([]);
@@ -149,6 +149,8 @@ export const useAnalysisStore = defineStore('analysis', () => {
   function syncBatchProgress() {
     const progress = batchProgress.value;
     if (!progress.visible) return;
+    // 剑叶批次不在本 store 的 historyList 里，由 leaf store 自己同步
+    if (progress.type !== 'stem') return;
 
     let targetJobs = historyList.value;
     if (progress.batchId) {
@@ -226,7 +228,8 @@ export const useAnalysisStore = defineStore('analysis', () => {
       completed: 0
     };
 
-    startHistoryPolling('batch');
+    // 只有茎秆批次由本 store 轮询历史；剑叶由 leaf store 的轮询同步进度
+    if (type === 'stem') startHistoryPolling('batch');
   }
 
   function resumeBatchProgressPolling(type, totalCount, batchId, currentCompleted) {
@@ -240,7 +243,26 @@ export const useAnalysisStore = defineStore('analysis', () => {
       completed: currentCompleted
     };
 
-    startHistoryPolling('batch');
+    if (type === 'stem') startHistoryPolling('batch');
+  }
+
+  /**
+   * 外部（剑叶 store）同步进度用：更新已完成数量，并在完成时自动隐藏浮层。
+   */
+  function setBatchProgressCompleted(completed) {
+    const progress = batchProgress.value;
+    if (!progress.visible) return;
+
+    progress.completed = Math.max(0, Math.min(progress.total, Number(completed) || 0));
+
+    if (progress.total > 0 && progress.completed >= progress.total) {
+      if (!batchFinalHideTimer) {
+        batchFinalHideTimer = setTimeout(() => {
+          batchProgress.value.visible = false;
+          batchFinalHideTimer = null;
+        }, 2000);
+      }
+    }
   }
 
   function clearBatchProgress() {
@@ -280,40 +302,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
   }
 
   /**
-   * 上传图片文件进行分析
-   * @param {File} file - 要上传的文件
-   * @param {string} batchId - 批次ID，用于标识同一次上传的多个文件
-   * @param {string} [modelName] - 选中的模型名称（可选）
-   */
-  async function uploadFileAction(file, batchId = null, modelName = null, onProgress = null, manageLoading = true, batchName = null) {
-    if (manageLoading) isLoading.value = true;
-    setError(null);
-    try {
-      const responseData = await analysisService.uploadFile(file, batchId, modelName, onProgress, batchName);
-      console.log('Upload successful, response:', responseData);
-
-      if (responseData.analysisId && responseData.originalFilename) {
-        if (batchId && batchName) {
-          setBatchName(batchId, batchName);
-        }
-        await fetchHistoryAction(false, true);
-      } else {
-        console.error('Upload response missing analysis_id or original_filename:', responseData);
-        setError(t('上传响应无效。')); // 调用 action 设置错误
-      }
-      return true; // 表示上传操作成功
-    } catch (err) {
-      console.error('Upload action failed:', err.response?.data || err.message);
-      // 从后端错误中提取 detail 字段
-      const detail = err.response?.data?.detail || err.message || t('上传文件失败。');
-      setError(detail); // 调用 action 设置错误
-      return false; // 表示上传操作失败
-    } finally {
-      if (manageLoading) isLoading.value = false;
-    }
-  }
-
-  /**
    * 自适应上传分析（统一入口）
    * 根据传入文件数量自动适配后端单张/批量处理
    * @param {File[]} files - 文件数组（1个或多个）
@@ -337,36 +325,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
       return null;
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  /**
-   * 批量上传文件夹进行分析
-   * @param {FileList|Array} files - 文件夹中的文件列表
-   * @param {string} [modelName] - 选中的模型名称（可选，整个批次用同一个模型）
-   */
-  async function uploadFolderAction(files, modelName = null, onProgress = null, manageLoading = true, batchName = null) {
-    if (manageLoading) isLoading.value = true;
-    setError(null);
-    try {
-      const responseData = await analysisService.uploadFolder(files, modelName, onProgress, batchName);
-      console.log('Folder upload successful, response:', responseData);
-
-      const responseBatchId = responseData?.batchId || responseData?.batch_id;
-      if (responseBatchId && batchName) {
-        setBatchName(responseBatchId, batchName);
-      }
-
-      await fetchHistoryAction(false, true);
-
-      return responseData; // 返回响应数据
-    } catch (err) {
-      console.error('Folder upload action failed:', err.response?.data || err.message);
-      const detail = err.response?.data?.detail || err.message || t('上传文件夹失败。');
-      setError(detail);
-      return null;
-    } finally {
-      if (manageLoading) isLoading.value = false;
     }
   }
 
@@ -538,11 +496,10 @@ export const useAnalysisStore = defineStore('analysis', () => {
     setBatchName,
     getBatchName,
     startBatchProgressPolling,
+    setBatchProgressCompleted,
     startHistoryPolling,
     stopHistoryPolling,
     clearBatchProgress,
-    uploadFileAction,
-    uploadFolderAction,
     uploadAnalysisAction,
     fetchHistoryAction,
     fetchHistoryIfStale,

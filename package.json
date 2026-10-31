@@ -1,6 +1,6 @@
 {
-  "name": "riceanyalzeweb",
-  "version": "0.0.0",
+  "name": "rice-analyze-web",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "engines": {
