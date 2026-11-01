@@ -1,5 +1,7 @@
 <template>
+  <!-- 导出列选择弹窗 -->
   <div v-if="visible" class="dialog-overlay" @click.self="close">
+    <!-- 弹窗主体 -->
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="export-columns-title">
       <header class="dialog-head">
         <h3 id="export-columns-title">{{ t('选择导出列') }}</h3>
@@ -10,6 +12,7 @@
         {{ summary || t('勾选需要写入 Excel 的列，导出单位可选。') }}
       </p>
 
+      <!-- 导出单位选择 -->
       <div class="dialog-units">
         <span class="dialog-units-label">{{ t('导出单位') }}</span>
         <div class="unit-options">
@@ -36,6 +39,7 @@
       <p v-if="loading" class="dialog-status">{{ t('正在加载可导出列…') }}</p>
       <p v-else-if="error" class="dialog-status error">{{ error }}</p>
 
+      <!-- 可导出列勾选列表 -->
       <div v-else class="columns-grid dialog-columns">
         <label v-for="column in columns" :key="column.key" class="column-item">
           <input v-model="selectedColumns" type="checkbox" :value="column.key" />
@@ -43,6 +47,7 @@
         </label>
       </div>
 
+      <!-- 弹窗底部操作 -->
       <footer class="dialog-actions">
         <button type="button" @click="close">{{ t('取消') }}</button>
         <button
@@ -66,15 +71,10 @@ const { t } = useI18n();
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
-  /** stem / leaf，决定从后端加载哪套可导出列 */
   group: { type: String, default: 'stem' },
-  /** 打开时的默认勾选；不传则全选 */
   defaultSelected: { type: Array, default: null },
-  /** “只看核心”使用的列；不传则不显示该按钮 */
   coreSelected: { type: Array, default: null },
-  /** 自定义说明文案 */
   summary: { type: String, default: '' },
-  /** 导出请求进行中，用于禁用确认按钮 */
   busy: { type: Boolean, default: false },
 });
 

@@ -1,4 +1,5 @@
 <template>
+  <!-- 数据中心页面 -->
   <main class="data-center-view">
     <header class="view-header">
       <div class="header-text">
@@ -17,6 +18,7 @@
       </span>
     </header>
 
+    <!-- 数据控制台 -->
     <section class="data-console">
       <div class="console-toolbar">
         <div class="data-switch" role="tablist" :aria-label="t('数据类型')">
@@ -145,6 +147,7 @@
       </div>
 
       <div class="console-body">
+        <!-- 数据列表主区域 -->
         <div class="console-main">
           <Transition name="data-panel" mode="out-in">
             <StemDataPanel v-if="activeGroup === 'stem'" key="stem" />
@@ -236,7 +239,6 @@ function handlePanelNotify({ message, type = 'success' }) {
   showToast(message, type);
 }
 
-// ---------------- Toast ----------------
 const toast = reactive({ visible: false, message: '', type: 'success' });
 const toastIconMap = { success: '✓', error: '✕', info: 'ℹ' };
 let toastTimer = null;
@@ -260,7 +262,6 @@ function hideToast() {
   }
 }
 
-// 单条 JSON 下载成功后，store 会写一条 notice，这里统一转成 toast。
 watch(
   () => store.notice?.id,
   () => {
@@ -271,7 +272,6 @@ watch(
 );
 
 onMounted(() => {
-  // 两个数据类型都预取一次，切换按钮上的数量才不会先显示 0。
   store.fetchGroup('stem', true);
   store.fetchGroup('leaf', true);
 });
@@ -289,7 +289,6 @@ onUnmounted(() => {
   animation: fadeInUp 220ms ease backwards;
 }
 
-/* ==================== 页头 ==================== */
 .view-header {
   display: flex;
   align-items: flex-end;
@@ -333,9 +332,7 @@ onUnmounted(() => {
   color: var(--color-primary-green-dark);
 }
 
-/* ==================== 数据控制台 ==================== */
 .data-console {
-  /* 不要用 overflow:hidden：它会创建滚动容器，让内部 sticky 工具栏失效 */
   overflow: visible;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -498,8 +495,6 @@ onUnmounted(() => {
 }
 
 .console-body {
-  /* 数据条 / 表型面板共用的高度上限：
-     预留页面标题、工具栏、间距后，让整页刚好不产生第二个页面滚动条 */
   --data-area-max-height: clamp(240px, calc(100vh - 350px), 720px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -514,7 +509,6 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-/* ==================== 面板切换 ==================== */
 .data-panel-enter-active,
 .data-panel-leave-active {
   transition: opacity 140ms ease, transform 160ms ease;
@@ -530,7 +524,6 @@ onUnmounted(() => {
   transform: translateY(-2px);
 }
 
-/* ==================== Toast（与茎秆 / 剑叶页一致） ==================== */
 .toast-overlay {
   position: fixed;
   right: 0;

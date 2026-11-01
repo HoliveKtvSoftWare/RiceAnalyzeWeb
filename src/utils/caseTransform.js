@@ -1,9 +1,3 @@
-// snake_case -> camelCase 的键名转换工具
-// 性能要点：
-// 1. 用 Map 缓存已转换过的键名（接口字段是固定集合，命中率极高）；
-// 2. 当对象/数组里没有任何键需要转换时，直接复用原对象，避免整棵结构重新分配 ——
-//    历史记录轮询每次都会走这里，几百条记录乘以十几个字段的内存分配是可以省掉的。
-
 const keyCache = new Map();
 const KEY_CACHE_LIMIT = 2000;
 
@@ -50,4 +44,4 @@ const transformKeys = (obj) => {
   return obj;
 };
 
-export { transformKeys, toCamelCase };
+export { transformKeys, toCamelCase };

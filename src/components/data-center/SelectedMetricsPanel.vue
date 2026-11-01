@@ -1,4 +1,5 @@
 <template>
+  <!-- 选中记录的指标面板 -->
   <aside class="metrics-panel">
     <header class="panel-head">
       <div class="panel-title">
@@ -199,7 +200,6 @@ async function loadMetrics() {
     })
   );
 
-  // 选中项在请求期间变化时丢弃过期响应
   if (seq !== metricsRequestSeq) return;
 
   const next = {};
@@ -272,7 +272,6 @@ watch(
   { immediate: true }
 );
 
-// 预取导出列，第一次点「下载数据」时无需等待。
 watch(
   () => props.group,
   () => {

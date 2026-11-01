@@ -1,10 +1,13 @@
 <template>
+  <!-- 应用根布局：根据登录状态切换不同外壳 -->
   <div id="app-layout">
     <transition name="layout-fade" mode="out-in">
+      <!-- 登录后的主体布局：侧边栏 + 顶部栏 + 页面内容 -->
       <div v-if="authStore.isAuthenticated" class="layout-with-sidebar">
         <AppSidebar ref="sidebarRef" @toggle-collapse="onSidebarToggle" />
         <div class="main-content-wrapper" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
           <AppHeader />
+          <!-- 登录后的页面内容区 -->
           <main class="page-content">
             <RouterView v-slot="{ Component, route: viewRoute }">
               <transition :key="viewRoute.fullPath" name="page-fade" mode="out-in">
@@ -16,6 +19,7 @@
       </div>
       <div v-else-if="showPublicHeader" class="public-content-wrapper">
         <AppHeader />
+        <!-- 公开页面的页面内容区 -->
         <main class="page-content">
           <RouterView v-slot="{ Component, route: viewRoute }">
             <transition :key="viewRoute.fullPath" name="page-fade" mode="out-in">
@@ -33,8 +37,8 @@
       </div>
     </transition>
 
-    <!-- 全局批次分割进度浮层（独立于 layout 过渡，跨页面保持） -->
     <transition name="batch-progress-float">
+      <!-- 全局分析进度浮层 -->
       <div v-if="authStore.isAuthenticated && analysisStore.batchProgress.visible" class="batch-progress-float">
         <div class="batch-progress-card" :class="{ done: analysisStore.batchProgress.completed >= analysisStore.batchProgress.total }">
           <div class="batch-progress-title">
@@ -95,7 +99,6 @@ onMounted(async () => {
 </script>
 
 <style>
-/* 应用外壳：浅色、无背景图、无毛玻璃 */
 #app-layout {
   min-height: 100vh;
   background-color: var(--color-background);
@@ -156,9 +159,6 @@ onMounted(async () => {
   }
 }
 
-/* 页面切换：只做淡入，不做位移，避免整页重绘。
-   注意：布局层（layout-fade）不定义过渡 —— 首屏路由解析时认证分支会切换，
-   若这里加 out-in 过渡，内容会被"离场"动画挡住，出现短暂空白。 */
 .page-fade-enter-active {
   transition: opacity 140ms ease;
 }
@@ -172,7 +172,6 @@ onMounted(async () => {
   opacity: 0;
 }
 
-/* ==================== 全局批次进度：一条细进度条 ==================== */
 .batch-progress-float {
   position: fixed;
   bottom: 24px;

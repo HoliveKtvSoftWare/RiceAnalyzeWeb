@@ -1,4 +1,5 @@
 <template>
+  <!-- 侧边栏：品牌、导航与版本信息 -->
   <aside class="app-sidebar" :class="{ collapsed }">
     <div class="sidebar-brand">
       <span class="brand-mark" aria-hidden="true">
@@ -32,6 +33,7 @@
       </button>
     </div>
 
+    <!-- 主导航菜单 -->
     <nav class="sidebar-nav">
       <router-link
         v-for="item in navItems"
@@ -46,6 +48,7 @@
       </router-link>
     </nav>
 
+    <!-- 侧边栏底部版本信息 -->
     <div class="sidebar-footer">
       <span class="footer-version" :title="buildTitle">
         v{{ appVersion }}<span v-if="buildLabel" class="footer-build"> · {{ buildLabel }}</span>
@@ -64,7 +67,6 @@ const emit = defineEmits(['toggle-collapse']);
 
 const collapsed = ref(false);
 
-// 构建时间 / 版本号（vite.config.js 通过 define 注入）
 const appVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '';
 const rawBuildTime = typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : '';
 const buildLabel = (() => {
@@ -135,7 +137,6 @@ defineExpose({ collapsed });
   width: var(--sidebar-width-collapsed);
 }
 
-/* ---- 品牌区 ---- */
 .sidebar-brand {
   display: flex;
   align-items: center;
@@ -211,7 +212,6 @@ defineExpose({ collapsed });
   gap: 0;
 }
 
-/* ---- 导航 ---- */
 .sidebar-nav {
   display: flex;
   flex: 1;
@@ -277,8 +277,6 @@ defineExpose({ collapsed });
   background: var(--color-sidebar-active);
   color: var(--color-primary-green-dark);
   font-weight: 500;
-  /* 切换路由时，当前项从左侧滑入，明确指示“当前位置”。
-     用 backwards：动画结束后不保留 transform，避免盖住按下的缩放反馈。 */
   animation: navActiveIn 200ms ease backwards;
 }
 
@@ -313,7 +311,6 @@ defineExpose({ collapsed });
   display: none;
 }
 
-/* ---- 底部 ---- */
 .sidebar-footer {
   flex-shrink: 0;
   padding: 12px 16px;

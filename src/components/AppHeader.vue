@@ -1,4 +1,5 @@
 <template>
+  <!-- 顶部工具栏：标题、语言切换、用户菜单 -->
   <header class="app-header">
     <div class="header-left">
       <span class="header-title">{{ pageTitle }}</span>
@@ -6,6 +7,7 @@
       <span class="header-subtitle">{{ t('水稻微表型结构分割平台') }}</span>
     </div>
 
+    <!-- 已登录用户菜单 -->
     <div class="user-info" v-if="authStore.isAuthenticated">
       <div
         class="dropdown"
@@ -53,6 +55,7 @@
       </div>
     </div>
 
+    <!-- 未登录时的登录/注册入口 -->
     <div class="user-info" v-else>
       <button class="primary login-button" type="button" @click="goToLogin">{{ t('登录') }}</button>
     </div>

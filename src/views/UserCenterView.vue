@@ -1,12 +1,13 @@
 <template>
+  <!-- 用户中心页面 -->
   <div class="user-center-view">
     <header class="view-header">
       <h1>{{ t('用户中心') }}</h1>
       <p class="view-subtitle">{{ t('管理账户信息、分析额度与安全设置') }}</p>
     </header>
 
+    <!-- 账号信息面板 -->
     <div class="panel-grid">
-      <!-- 个人信息 -->
       <section class="panel">
         <div class="panel-header">
           <h3>{{ t('个人信息') }}</h3>
@@ -27,7 +28,6 @@
         <p v-else class="muted-text">{{ t('正在加载用户信息…') }}</p>
       </section>
 
-      <!-- 额度 -->
       <section class="panel">
         <div class="panel-header">
           <h3>{{ t('分析额度') }}</h3>
@@ -48,7 +48,6 @@
         </div>
       </section>
 
-      <!-- 账户设置 -->
       <section class="panel">
         <div class="panel-header">
           <h3>{{ t('账户设置') }}</h3>
@@ -67,7 +66,6 @@
         </div>
       </section>
 
-      <!-- 安全 -->
       <section class="panel">
         <div class="panel-header">
           <h3>{{ t('安全') }}</h3>
@@ -80,7 +78,7 @@
       </section>
     </div>
 
-    <!-- 购买额度 -->
+    <!-- 购买额度弹窗 -->
     <div v-if="showPurchaseModal" class="modal-overlay" @click="showPurchaseModal = false">
       <div class="modal" @click.stop>
         <div class="modal-header">
@@ -111,7 +109,7 @@
       </div>
     </div>
 
-    <!-- 删除账户 -->
+    <!-- 删除账户确认弹窗 -->
     <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
       <div class="modal" @click.stop>
         <div class="modal-header">
@@ -134,7 +132,6 @@
       </div>
     </div>
 
-    <!-- 使用记录 -->
     <div v-if="showUsageHistory" class="modal-overlay" @click="showUsageHistory = false">
       <div class="modal" @click.stop>
         <div class="modal-header">
@@ -158,7 +155,6 @@
   </div>
 </template>
 
-
 <script setup>
 import { useI18n } from '@/i18n';
 
@@ -171,7 +167,6 @@ import { SUPPORTED_LOCALES } from '@/i18n';
 const authStore = useAuthStore();
 const router = useRouter();
 
-// 响应式状态
 const isLoading = ref(false);
 const showPurchaseModal = ref(false);
 const showDeleteModal = ref(false);
@@ -179,27 +174,22 @@ const showUsageHistory = ref(false);
 const selectedOption = ref(null);
 const deleteConfirmed = ref(false);
 
-// 用户设置：语言以 i18n 当前语言为准，切换即时生效
 const settings = ref({
   emailNotifications: true,
   autoSave: true,
   language: locale.value
 });
 
-// 默认设置（用于重置）
 let defaultSettings = { ...settings.value };
 
-// 下拉框改动即时应用（不必先点“保存设置”）
 watch(() => settings.value.language, (next) => {
   if (next !== locale.value) setLocale(next);
 });
 
-// 外部（或刷新后）语言变化时，让下拉开态保持一致
 watch(locale, (next) => {
   if (settings.value.language !== next) settings.value.language = next;
 });
 
-// 购买选项
 const purchaseOptions = ref([
   { id: 1, amount: 10, price: 9.9 },
   { id: 2, amount: 50, price: 39.9 },
@@ -207,14 +197,12 @@ const purchaseOptions = ref([
   { id: 4, amount: 200, price: 119.9 }
 ]);
 
-// 使用记录（模拟数据）
 const usageHistory = ref([
   { id: 1, date: new Date(Date.now() - 86400000), action: '图像分割', cost: 1 },
   { id: 2, date: new Date(Date.now() - 172800000), action: '图像分割', cost: 1 },
   { id: 3, date: new Date(Date.now() - 259200000), action: '图像分割', cost: 1 }
 ]);
 
-// 计算属性
 const quotaPercentage = computed(() => {
   const quota = authStore.userQuota || 0;
   const used = usageHistory.value.reduce((sum, record) => sum + record.cost, 0);
@@ -225,15 +213,12 @@ const settingsChanged = computed(() => {
   return JSON.stringify(settings.value) !== JSON.stringify(defaultSettings);
 });
 
-// 生命周期
 onMounted(() => {
-  // 确保用户信息是最新的
   if (authStore.isAuthenticated && !authStore.user) {
     authStore.fetchUser();
   }
 });
 
-// 方法
 const refreshUserInfo = async () => {
   isLoading.value = true;
   try {
@@ -255,7 +240,6 @@ const formatDate = (dateString) => {
 };
 
 const saveSettings = () => {
-  // 语言已即时生效；这里只把当前选择记为“默认值”，供重置使用
   setLocale(settings.value.language);
   defaultSettings = { ...settings.value };
 };
@@ -266,7 +250,6 @@ const resetSettings = () => {
 };
 
 const handlePurchase = () => {
-  // 这里应该调用购买API
   console.log('购买选项:', selectedOption.value);
   showPurchaseModal.value = false;
   selectedOption.value = null;
@@ -278,15 +261,12 @@ const handleLogout = async () => {
 };
 
 const handleDeleteAccount = () => {
-  // 这里应该调用删除账户API
   console.log('删除账户确认');
   showDeleteModal.value = false;
   deleteConfirmed.value = false;
-  // 模拟删除后登出
   handleLogout();
 };
 
-// 监听设置变化
 watch(settings, (newSettings) => {
   console.log('设置已更改:', newSettings);
 }, { deep: true });
@@ -297,9 +277,6 @@ watch(settings, (newSettings) => {
   max-width: 960px;
   margin: 0 auto;
   padding: 4px 0 24px;
-  /* 页面切换动效：与首页、剑叶页一致，淡入 + 轻微上移。
-     用 backwards 而不是 both：动画结束后不保留 transform，
-     避免影响页面内 position: fixed 的弹窗定位。 */
   animation: fadeInUp 220ms ease backwards;
 }
 
@@ -336,7 +313,6 @@ watch(settings, (newSettings) => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  /* 四张面板依次入场，和首页功能卡片、剑叶指标卡保持同一节奏 */
   animation: fadeInUp 260ms ease backwards;
 }
 
@@ -476,8 +452,6 @@ watch(settings, (newSettings) => {
 .select-inline {
   width: auto;
   min-width: 128px;
-  /* 不要写死 height：基础样式有 9px 上下内边距，32px 高度会把文字行压扁导致下半截被裁掉。
-     用内边距决定高度，行高保持 1.5，视觉高度仍是 32px 左右。 */
   height: auto;
   padding: 6px 32px 6px 12px;
   font-size: 12.5px;
@@ -511,7 +485,6 @@ watch(settings, (newSettings) => {
   color: var(--color-error);
 }
 
-/* ==================== 弹窗 ==================== */
 .modal-overlay {
   position: fixed;
   inset: 0;

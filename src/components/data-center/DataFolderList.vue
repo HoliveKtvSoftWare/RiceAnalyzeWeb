@@ -1,6 +1,6 @@
 <template>
+  <!-- 数据中心的文件夹列表 -->
   <div class="data-folder-list">
-    <!-- 首次加载：用与真实文件夹等高的骨架占位，避免页面高度跳动 -->
     <div v-if="loading && !groups.length" class="folder-skeleton" aria-hidden="true">
       <div v-for="index in 3" :key="index" class="skeleton-folder">
         <span class="skeleton-check"></span>
@@ -21,6 +21,7 @@
       <p>{{ emptyHint }}</p>
     </div>
 
+    <!-- 单个文件夹卡片 -->
     <article v-for="folder in groups" :key="folder.id" class="data-folder">
       <div class="folder-header">
         <label class="folder-check" :title="t('选择整个文件夹')" @click.stop>
@@ -249,7 +250,6 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-item', 'toggle-group', 'download-json']);
 
-// 文件夹展开状态：新出现的文件夹默认展开；用户手动收起后，数据刷新仍保持收起。
 const expandedIds = reactive(new Set());
 const knownIds = new Set();
 
@@ -350,7 +350,6 @@ function toggleFolder(folder) {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  /* 展开后的数据条超过最大高度时，在数据条区域内滚动 */
   max-height: var(--data-area-max-height, clamp(360px, 60vh, 720px));
   padding-right: 4px;
   overflow-x: hidden;
@@ -358,7 +357,6 @@ function toggleFolder(folder) {
   scrollbar-gutter: stable;
 }
 
-/* ==================== 文件夹 ==================== */
 .data-folder {
   flex-shrink: 0;
   overflow: hidden;
@@ -491,7 +489,6 @@ function toggleFolder(folder) {
   text-align: center;
 }
 
-/* ==================== 数据条 ==================== */
 .folder-body {
   border-top: 1px solid var(--color-border-light);
 }
@@ -524,7 +521,6 @@ function toggleFolder(folder) {
   flex-shrink: 0;
 }
 
-/* 图片 / JSON 统一使用类型图标，不再加载缩略图 */
 .row-icon {
   display: flex;
   align-items: center;
@@ -678,7 +674,6 @@ function toggleFolder(folder) {
   animation: spin 0.7s linear infinite;
 }
 
-/* ==================== 空状态 / 骨架 ==================== */
 .data-empty {
   display: flex;
   flex-direction: column;

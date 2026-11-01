@@ -1,5 +1,7 @@
 <template>
+  <!-- 首页 -->
   <div class="home-view">
+    <!-- 首屏介绍 -->
     <section class="hero">
       <div class="hero-main">
         <p class="eyebrow">{{ t('水稻微表型 · 结构分割') }}</p>
@@ -16,6 +18,7 @@
         </div>
       </div>
 
+      <!-- 能力概览面板 -->
       <aside class="hero-panel">
         <div class="panel-row">
           <span class="panel-label">{{ t('识别组织') }}</span>
@@ -33,6 +36,7 @@
       </aside>
     </section>
 
+    <!-- 功能特性区 -->
     <section class="features">
       <h2 class="section-title">{{ t('核心能力') }}</h2>
       <div class="feature-grid stagger-in">
@@ -94,7 +98,6 @@ const features = [
   padding: 8px 0 24px;
 }
 
-/* ==================== 首屏 ==================== */
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -176,7 +179,6 @@ const features = [
   color: var(--color-text-primary);
 }
 
-/* ---- 右侧指标卡 ---- */
 .hero-panel {
   padding: 6px 18px;
   border: 1px solid var(--color-border);
@@ -210,7 +212,6 @@ const features = [
   line-height: 1.6;
 }
 
-/* ==================== 功能列表 ==================== */
 .section-title {
   margin: 0 0 16px;
   color: var(--color-text-primary);

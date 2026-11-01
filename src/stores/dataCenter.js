@@ -7,11 +7,6 @@ import { t } from '@/i18n';
 
 const GROUPS = ['stem', 'leaf'];
 
-/**
- * 通过 blob 读取后端错误信息：下载接口设置了 responseType='blob'，
- * 后端返回的 { detail } 也会被包在 Blob 里，直接 err.message 只会得到
- * “Request failed with status code 400”，对用户没有帮助。
- */
 async function readDownloadError(error) {
   const data = error?.response?.data;
   if (data instanceof Blob) {
@@ -20,7 +15,6 @@ async function readDownloadError(error) {
       const parsed = JSON.parse(text);
       if (parsed?.detail) return String(parsed.detail);
     } catch {
-      /* Blob 不是 JSON 时退回通用提示 */
     }
   }
   if (typeof data?.detail === 'string') return data.detail;
@@ -28,22 +22,15 @@ async function readDownloadError(error) {
 }
 
 export const useDataCenterStore = defineStore('dataCenter', () => {
-  /** 原始历史记录（已过滤为至少拥有图片或 JSON 的已完成记录） */
   const records = reactive({ stem: [], leaf: [] });
   const loading = reactive({ stem: false, leaf: false });
   const loaded = reactive({ stem: false, leaf: false });
   const errors = reactive({ stem: null, leaf: null });
 
-  /**
-   * 勾选状态按「数据项」记录：图片和 JSON 是两个独立项，
-   * key 形如 `{analysisId}:image` / `{analysisId}:json`。
-   */
   const selectedKeys = reactive({ stem: [], leaf: [] });
   const downloading = ref(false);
-  /** 正在单独下载 JSON 的数据项 key */
   const downloadingJsonKey = ref(null);
 
-  /** 单条 JSON 下载完成后的轻提示，由页面监听并显示 toast */
   const notice = ref(null);
   let noticeId = 0;
 
@@ -138,7 +125,6 @@ export const useDataCenterStore = defineStore('dataCenter', () => {
     );
   }
 
-  /** 只勾选某一类数据（image=掩膜图 / json），已有的另一类勾选保持不变 */
   function selectKind(group, kind) {
     if (!isGroup(group) || (kind !== 'image' && kind !== 'json')) return;
     const keys = groupsFor(group).flatMap((folder) =>
@@ -164,7 +150,6 @@ export const useDataCenterStore = defineStore('dataCenter', () => {
     if (isGroup(group)) errors[group] = null;
   }
 
-  /** 收集当前分组下已勾选的数据项（图片 / JSON 各自独立） */
   function selectedItems(group) {
     const selected = new Set(selectedKeys[group] || []);
     const items = [];
@@ -176,15 +161,10 @@ export const useDataCenterStore = defineStore('dataCenter', () => {
     return items;
   }
 
-  /** 当前分组下已勾选的图片项（表型数据面板 / Excel 导出用） */
   function selectedImageItems(group) {
     return selectedItems(group).filter((item) => item.kind === 'image');
   }
 
-  /**
-   * 下载当前数据类型下勾选的数据。
-   * 后端只打包被勾选的文件（图片或 JSON），不会自动把同一条记录的另一种文件塞进来。
-   */
   async function downloadSelected(group) {
     if (!isGroup(group) || downloading.value) return null;
     const items = selectedItems(group);
@@ -212,7 +192,6 @@ export const useDataCenterStore = defineStore('dataCenter', () => {
     }
   }
 
-  /** 单独下载一条 JSON 文件（不打包、不勾选） */
   async function downloadJson(group, item) {
     if (!isGroup(group) || !item || item.kind !== 'json') return false;
     if (downloadingJsonKey.value) return false;
@@ -262,4 +241,4 @@ export const useDataCenterStore = defineStore('dataCenter', () => {
     downloadJson,
     clearNotice,
   };
-});
+});

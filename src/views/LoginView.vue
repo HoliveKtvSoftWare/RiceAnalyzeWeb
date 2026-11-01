@@ -1,5 +1,7 @@
 <template>
+  <!-- 登录页面 -->
   <div class="auth-page">
+    <!-- 登录卡片 -->
     <div class="auth-card">
       <div class="auth-header">
         <span class="brand-mark" aria-hidden="true">
@@ -14,6 +16,7 @@
         <p class="auth-subtitle">{{ t('登录以继续使用水稻微表型分析平台') }}</p>
       </div>
 
+      <!-- 登录表单 -->
       <form class="auth-form" @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="email">{{ t('邮箱') }}</label>

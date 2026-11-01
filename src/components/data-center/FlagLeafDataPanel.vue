@@ -1,4 +1,5 @@
 <template>
+  <!-- 剑叶数据列表区域 -->
   <section class="data-section">
     <header class="section-head">
       <p class="section-summary">

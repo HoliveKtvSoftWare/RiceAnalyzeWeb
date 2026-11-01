@@ -1,13 +1,16 @@
 <template>
+  <!-- 剑叶分析页面 -->
   <div class="leaf-page">
     <div v-if="leafStore.error" class="alert" role="alert">
       <span>{{ leafStore.error }}</span>
       <button type="button" class="alert-close" @click="leafStore.setError(null)">×</button>
     </div>
 
+    <!-- 左右两栏布局 -->
     <div class="leaf-layout">
-      <!-- 左：分析设置 + 队列 -->
+      <!-- 左侧：分析设置与处理队列 -->
       <aside class="leaf-setup">
+        <!-- 上传与模型设置 -->
         <section class="setup-card">
           <h2>{{ t('分析设置') }}</h2>
 
@@ -106,6 +109,7 @@
           </p>
         </section>
 
+        <!-- 处理队列 -->
         <section class="setup-card">
           <h2>{{ t('处理队列') }}</h2>
           <p v-if="!leafStore.processingJobs.length" class="queue-empty">{{ t('当前没有进行中的任务') }}</p>
@@ -119,8 +123,9 @@
         </section>
       </aside>
 
-      <!-- 右：结果舞台 -->
+      <!-- 右侧：结果舞台与记录 -->
       <main class="leaf-stage">
+        <!-- 结果舞台卡片 -->
         <section v-if="leafStore.selectedJob" class="stage-card">
           <header class="stage-head">
             <div class="stage-title">
@@ -163,7 +168,7 @@
           </header>
 
           <div class="stage-body">
-            <!-- 单图查看器：原图 / 分割图 用标签页切换 -->
+            <!-- 单图查看器 -->
             <div class="viewer">
               <div class="viewer-bar">
                 <div class="viewer-tabs">
@@ -222,7 +227,7 @@
               </div>
             </div>
 
-            <!-- 指标网格：剑叶专属口径 -->
+            <!-- 结构指标面板 -->
             <div class="metric-panel">
               <div class="metric-head">
                 <h3>{{ t('结构指标') }}</h3>
@@ -250,6 +255,7 @@
           </div>
         </section>
 
+        <!-- 未选中记录时的空状态 -->
         <section v-else class="stage-empty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 19C5 10.5 10 4.5 20 4c.5 9.5-5.5 15-15 15Z" />
@@ -259,7 +265,7 @@
           <p>{{ t('先在左侧上传剑叶切片图，或在下方记录条里点一张卡片。') }}</p>
         </section>
 
-        <!-- 记录：横向卡片条（茎秆页是竖向列表） -->
+        <!-- 剑叶记录条 -->
         <section class="records">
           <header class="records-head">
             <div class="records-title">
@@ -368,7 +374,7 @@
       </main>
     </div>
 
-    <!-- 导出列选择弹窗（与茎秆页共用） -->
+    <!-- 导出列选择弹窗 -->
     <ExportColumnsDialog
       :visible="showExportDialog"
       group="leaf"
@@ -404,7 +410,6 @@ import {
 
 const leafStore = useLeafAnalysisStore();
 const excelStore = useExcelExportStore();
-// 记录条：滚轮横向浏览（与茎秆页共用同一套缓动逻辑）
 const { stripRef: recordStripRef, onWheel: onRecordWheel } = useHorizontalWheelScroll();
 
 const fileInput = ref(null);
@@ -415,7 +420,6 @@ const dragging = ref(false);
 const viewTab = ref('annotated');
 const isExportingJson = ref(false);
 const showExportDialog = ref(false);
-// single：舞台标题栏的单条导出；batch：记录栏的批量导出
 const exportMode = ref('batch');
 
 const allRecordsSelected = computed(() =>
@@ -424,7 +428,6 @@ const allRecordsSelected = computed(() =>
 
 const totalPickedFiles = computed(() => pickedFiles.value.length + folderFiles.value.length);
 
-// ---------------- 批次分组（与茎秆页一致） ----------------
 const {
   batchCountOf,
   batchNameOf,
@@ -437,7 +440,6 @@ const {
   setSelectedIds: (ids) => { leafStore.selectedIds = ids; },
 });
 
-// ---------------- 缩放 ----------------
 const zoom = reactive({
   scale: 1, x: 0, y: 0, dragging: false,
   startX: 0, startY: 0, originX: 0, originY: 0,
@@ -446,7 +448,6 @@ const zoom = reactive({
 const currentImage = computed(() => {
   const job = leafStore.selectedJob;
   if (!job) return null;
-  // 原图可能是 TIFF（浏览器无法直接显示），后端会额外生成 JPEG 预览
   return viewTab.value === 'annotated'
     ? (job.annotatedImageUrl || job.originalPreviewUrl || job.originalImageUrl)
     : (job.originalPreviewUrl || job.originalImageUrl || job.annotatedImageUrl);
@@ -492,7 +493,6 @@ function onMouseUp() {
   window.removeEventListener('mouseup', onMouseUp);
 }
 
-// ---------------- 文件选择 ----------------
 const isImage = (file) => Boolean(file && file.type && file.type.startsWith('image/'));
 
 function addFiles(list) {
@@ -505,7 +505,6 @@ function onPick(event) {
   event.target.value = '';
 }
 
-/** 文件夹里可能有多层目录，显示相对路径方便区分同名文件 */
 function folderFilePath(file) {
   return file.webkitRelativePath || file.name;
 }
@@ -541,18 +540,14 @@ async function startAnalysis() {
   if (folderInput.value) folderInput.value.value = '';
   await leafStore.fetchHistory(false);
 
-  // 单张上传时自动选中这条记录；批量时选中批次里的第一条
   const targetId = response.analysisId || response.analyses?.[0]?.analysisId || null;
   const target = leafStore.history.find(job => job.analysisId === targetId) || leafStore.history[0];
   if (target) await leafStore.selectJob(target);
 }
 
-// ---------------- 展示辅助 ----------------
-// 比例尺随单位换算：统一走公共工具
 const unitSymbol = computed(() => unitSymbolOf(leafStore.unit));
 const scalePerPx = computed(() => scalePerPxOf(leafStore.metrics, leafStore.unit));
 
-// 剑叶关键指标：面积 / 周长 / 维管束计数
 const metricCards = computed(() => {
   const metrics = leafStore.metrics;
   if (!metrics) return [];
@@ -599,7 +594,6 @@ const metricCards = computed(() => {
   ];
 });
 
-// ---------------- 记录操作 ----------------
 async function selectJob(job) {
   await leafStore.selectJob(job);
   resetZoom();
@@ -623,7 +617,6 @@ async function removeSelected() {
   await leafStore.removeBatch(ids);
 }
 
-// ---- 记录多选：全选 / 取消全选 ----
 function toggleSelectAll() {
   if (allRecordsSelected.value) {
     leafStore.clearSelection();
@@ -633,13 +626,10 @@ function toggleSelectAll() {
   if (typeof leafStore.selectAll === 'function') {
     leafStore.selectAll(ids);
   } else {
-    // 热更新前创建的 store 实例可能没有 selectAll，直接赋值兜底
     leafStore.selectedIds = ids;
   }
 }
 
-// ---------------- 导出 ----------------
-// “只看核心”使用的列；实际可导出列由弹窗从后端接口加载
 const LEAF_CORE_COLUMNS = [
   'filename', 'scalePerPx', 'sectionArea', 'tissueArea',
   'body1Area', 'body2Area', 'side1Area', 'side2Area',
@@ -694,7 +684,6 @@ async function exportJson() {
   }
 }
 
-// 批量导出选中记录的 JSON：单条时直接下载单个文件，多条时打包成 ZIP
 async function exportSelectedJson() {
   const ids = [...leafStore.completedSelected];
   if (!ids.length) {
@@ -711,7 +700,6 @@ async function exportSelectedJson() {
     } else {
       await exportService.batchExportJson(ids);
     }
-    // 导出成功后取消这批记录的勾选，避免重复导出
     leafStore.selectedIds = leafStore.selectedIds.filter(id => !ids.includes(id));
   } catch (err) {
     leafStore.setError(err.response?.data?.detail || t('导出 JSON 失败。'));
@@ -720,7 +708,6 @@ async function exportSelectedJson() {
   }
 }
 
-// ---------------- 生命周期 ----------------
 onMounted(async () => {
   await Promise.allSettled([
     leafStore.fetchModels(),
@@ -733,14 +720,11 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  // 不停止 leafStore 的轮询：分析进行中切到其它页面时，底部全局进度条仍要持续更新；
-  // 没有进行中的任务时 ensurePolling 会自然停下。
   onMouseUp();
 });
 </script>
 
 <style scoped>
-/* ========== 页面骨架：顶部横幅 + 左设置 / 右舞台 ========== */
 .leaf-page {
   display: flex;
   flex-direction: column;
@@ -750,7 +734,6 @@ onUnmounted(() => {
   padding: 4px 2px 4px;
 }
 
-/* ========== 两栏 ========== */
 .leaf-layout {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
@@ -837,7 +820,6 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
-/* 文件夹入口：比主上传框弱一级，避免抢视线 */
 .folder-button {
   width: 100%;
   height: 30px;
@@ -1003,7 +985,6 @@ onUnmounted(() => {
   color: var(--color-text-light);
 }
 
-/* ========== 舞台 ========== */
 .leaf-stage {
   display: flex;
   flex-direction: column;
@@ -1111,9 +1092,6 @@ onUnmounted(() => {
   font-size: 11.5px;
 }
 
-/* 删除按钮采用「白底红字」的轻量危险样式。
-   注意：main.css 里的 button.danger 是「红底白字」，这里必须显式覆盖
-   background，否则会变成红底红字，文字完全看不见。 */
 .stage-actions .danger,
 .records-actions .danger {
   border-color: rgba(220, 38, 38, 0.25);
@@ -1138,7 +1116,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* ---- 单图查看器 ---- */
 .viewer {
   display: flex;
   flex-direction: column;
@@ -1281,7 +1258,6 @@ onUnmounted(() => {
   animation: spin 0.7s linear infinite;
 }
 
-/* ---- 指标面板 ---- */
 .metric-panel {
   display: flex;
   flex-direction: column;
@@ -1366,7 +1342,6 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- 空状态 ---- */
 .stage-empty {
   display: flex;
   flex: 1 1 auto;
@@ -1398,7 +1373,6 @@ onUnmounted(() => {
   font-size: 12px;
 }
 
-/* ========== 记录条 ========== */
 .records {
   display: flex;
   flex: 0 0 auto;
@@ -1459,7 +1433,6 @@ onUnmounted(() => {
   color: var(--color-text-primary);
 }
 
-/* ========== 导出列弹窗 ========== */
 .export-progress {
   display: flex;
   align-items: center;
@@ -1488,7 +1461,6 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* 横向卡片条：不用 scroll-snap，滚轮缓动才能连续滑动而不被逐帧吸回 */
 .record-strip {
   display: flex;
   gap: 10px;
@@ -1590,7 +1562,6 @@ onUnmounted(() => {
   color: var(--color-border-strong);
 }
 
-/* 批次角标：点击整批勾选，与茎秆页一致 */
 .batch-chip {
   display: inline-flex;
   align-items: center;
@@ -1630,7 +1601,6 @@ onUnmounted(() => {
   color: var(--color-primary-green-dark);
 }
 
-/* 错误横幅 */
 .alert {
   display: flex;
   align-items: center;
@@ -1657,8 +1627,6 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-/* 窄屏下（右列放不下"图 + 指标"两栏）退回自然高度：页面可滚动，
-   不再强行把两个区块压进一屏，否则内容会被裁掉。 */
 @media (max-width: 1180px) {
   .leaf-layout {
     grid-template-columns: 300px minmax(0, 1fr);

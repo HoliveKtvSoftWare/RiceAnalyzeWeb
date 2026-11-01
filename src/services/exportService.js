@@ -29,12 +29,6 @@ const batchExportJson = (analysisIds) => {
   });
 };
 
-/**
- * 下载选中的数据项（图片或 JSON，可混合）。
- * 后端只打包传入的文件，并按样本名放进对应目录。
- * @param {Array<{analysisId: string, kind: 'image'|'json'}>} items
- * @param {'stem'|'leaf'} [group]
- */
 const downloadPackages = (items, group = null) => {
   console.debug('Downloading data packages for', items.length, 'items');
   return apiClient.post('/export/packages', {

@@ -1,8 +1,3 @@
-/**
- * 英文词典：key 是中文原文，value 是英文译文。
- * 词典里没有的句子会原样显示中文（见 i18n/index.js 的回退逻辑）。
- * 新增文案时，把中文原文加到这里即可，不需要动模板里的 key。
- */
 export default {
   "分割完成": "Segmentation finished",
   "分割处理中": "Segmentation in progress",
@@ -277,7 +272,6 @@ export default {
   "平均 {v}": "avg {v}",
   "{n} 个": "{n}",
   "导出选中 Excel": "Export selected to Excel",
-  // ---- 两个分析页（手工补的插值句）----
   "平均 {a} / {b}": "avg {a} / {b}",
   "导出选中 Excel（{done}/{total}）": "Export selected to Excel ({done}/{total})",
   "确定要删除选中的 {n} 条记录吗？此操作不可恢复，同时会清理关联的原图、标注图和 JSON 文件。":
@@ -299,7 +293,6 @@ export default {
   "导出 JSON（{done}/{total}）": "Export JSON ({done}/{total})",
   "导出 Excel（{done}/{total}）": "Export Excel ({done}/{total})",
   "删除（{n}）": "Delete ({n})",
-  // ---- 茎秆页（与剑叶页对齐后的新增文案）----
   "茎秆模型": "Stem model",
   "拖拽茎秆切片图到这里": "Drag a stem section image here",
   "取消预览": "Cancel preview",
@@ -323,7 +316,6 @@ export default {
   "小维管束/茎秆周长比": "Small bundle count / stem perimeter",
   "大维管束/周长·空腔差比": "Large bundle count / (perimeter · area diff)",
   "导出成功": "Export complete",
-  // ---- 数据中心 ----
   "数据中心": "Data center",
   "查看并分别下载茎秆、剑叶分析生成的图片与 JSON 数据":
     "Browse and download the images and JSON files produced by stem and flag leaf analyses separately",
@@ -384,4 +376,4 @@ export default {
   "标注图": "Annotated image",
   "掩膜图": "Masked image",
   "图片": "Image",
-};
+};

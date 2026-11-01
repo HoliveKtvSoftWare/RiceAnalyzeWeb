@@ -1,5 +1,7 @@
 <template>
+  <!-- 注册页面 -->
   <div class="auth-page">
+    <!-- 注册卡片 -->
     <div class="auth-card">
       <div class="auth-header">
         <span class="brand-mark" aria-hidden="true">
@@ -14,6 +16,7 @@
         <p class="auth-subtitle">{{ t('注册后即可上传图像并导出表型数据') }}</p>
       </div>
 
+      <!-- 注册表单 -->
       <form class="auth-form" @submit.prevent="handleRegister">
         <div class="form-group">
           <label for="email">{{ t('邮箱') }}</label>

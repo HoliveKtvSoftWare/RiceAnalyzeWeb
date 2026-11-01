@@ -1,18 +1,6 @@
 import { computed } from 'vue';
 import { t } from '@/i18n';
 
-/**
- * 批次角标的公共逻辑（茎秆 / 剑叶记录条共用）。
- *
- * 同一个 batchId 下的记录数量大于 1 时显示角标；
- * 点击角标整批勾选/取消勾选。
- *
- * @param {object} options
- * @param {import('vue').Ref<Array>} options.jobs 当前页面的历史记录列表
- * @param {() => string[]} options.getSelectedIds 读取当前勾选
- * @param {(ids: string[]) => void} options.setSelectedIds 写回勾选
- * @param {(job: object) => string} [options.resolveBatchName] 额外的批次名来源
- */
 export function useBatchSelection({ jobs, getSelectedIds, setSelectedIds, resolveBatchName }) {
   const batchCountMap = computed(() => {
     const map = {};
@@ -53,4 +41,4 @@ export function useBatchSelection({ jobs, getSelectedIds, setSelectedIds, resolv
   }
 
   return { batchCountOf, batchNameOf, batchChipLabel, isBatchSelected, toggleBatchSelection };
-}
+}

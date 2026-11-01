@@ -17,7 +17,6 @@ const exportSingleToExcel = (analysisId, originalFilename, selectedColumns, unit
     console.debug(`Exporting single analysis ${analysisId} (${originalFilename}) to Excel...`);
     return apiClient.post(`/excel/${analysisId}`, { selectedColumns, unit, group }, {
         responseType: 'blob',
-        // Full side-path measurements on CPU can exceed 30 seconds.
         timeout: group === 'leaf' ? 0 : 30000
     }).then(response => {
         console.debug('Single Excel export successful');
@@ -89,8 +88,6 @@ const pollAndDownloadTask = (taskId, onProgress, interval = 1500) => {
             fn(value);
         };
 
-        // 用递归 setTimeout 代替 setInterval：上一次请求返回后才安排下一次，
-        // 后端较慢时不会堆积并发的状态查询请求。
         const poll = async () => {
             attempts++;
             if (attempts > maxAttempts) {
@@ -99,8 +96,6 @@ const pollAndDownloadTask = (taskId, onProgress, interval = 1500) => {
             }
             try {
                 const status = await getTaskStatus(taskId);
-                // A large batch may run for a long time; only time out when
-                // it has stopped making progress, not while rows are completing.
                 if ((status.progress ?? 0) > lastProgress) {
                     attempts = 0;
                     lastProgress = status.progress ?? 0;
@@ -142,4 +137,4 @@ export const excelService = {
     getTaskStatus,
     downloadTaskResult,
     pollAndDownloadTask,
-};
+};

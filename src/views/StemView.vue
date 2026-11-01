@@ -1,13 +1,16 @@
 <template>
+  <!-- 茎秆分析页面 -->
   <main class="stem-page">
     <div v-if="analysisStore.error" class="alert" role="alert">
       <span>{{ analysisStore.error }}</span>
       <button type="button" class="alert-close" :aria-label="t('关闭提示')" @click="analysisStore.setError(null)">×</button>
     </div>
 
+    <!-- 左右两栏布局 -->
     <div class="stem-layout">
-      <!-- 左：分析设置 + 队列（与剑叶页同构） -->
+      <!-- 左侧：分析设置与处理队列 -->
       <aside class="stem-setup">
+        <!-- 上传与模型设置 -->
         <section class="setup-card">
           <h2>{{ t('分析设置') }}</h2>
 
@@ -77,7 +80,6 @@
             @change="handleFolderSelect"
           />
 
-          <!-- 待处理文件：点击文件名可在右侧舞台预览 -->
           <template v-if="totalPendingFiles">
             <div v-if="selectedFiles.length" class="chip-group">
               <span class="chip-group-label">{{ t('单张文件 ({n})', { n: selectedFiles.length }) }}</span>
@@ -159,6 +161,7 @@
           </p>
         </section>
 
+        <!-- 处理队列 -->
         <section class="setup-card">
           <h2>{{ t('处理队列') }}</h2>
           <p v-if="!processingJobs.length" class="queue-empty">{{ t('当前没有进行中的任务') }}</p>
@@ -172,8 +175,9 @@
         </section>
       </aside>
 
-      <!-- 右：结果舞台 + 记录条 -->
+      <!-- 右侧：结果舞台与记录 -->
       <main class="stem-stage">
+        <!-- 结果舞台卡片 -->
         <section v-if="analysisStore.selectedJob || previewPendingFile" class="stage-card">
           <header class="stage-head">
             <div class="stage-title">
@@ -222,7 +226,7 @@
           </header>
 
           <div class="stage-body">
-            <!-- 单图查看器：原图 / 分割图 用标签页切换（与剑叶页一致） -->
+            <!-- 单图查看器 -->
             <div class="viewer">
               <div class="viewer-bar">
                 <div v-if="previewPendingFile" class="viewer-caption">
@@ -305,7 +309,7 @@
               </div>
             </div>
 
-            <!-- 结构指标：口径与导出 Excel 的 15 项一致 -->
+            <!-- 结构指标面板 -->
             <div class="metric-panel">
               <div class="metric-head">
                 <h3>{{ t('结构指标') }}</h3>
@@ -339,6 +343,7 @@
           </div>
         </section>
 
+        <!-- 未选中记录时的空状态 -->
         <section v-else class="stage-empty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 21V5" />
@@ -349,7 +354,7 @@
           <p>{{ t('先在左侧上传茎秆切片图，或在下方记录条里点一张卡片。') }}</p>
         </section>
 
-        <!-- 记录：横向卡片条 -->
+        <!-- 茎秆记录条 -->
         <section class="records">
           <header class="records-head">
             <div class="records-title">
@@ -471,7 +476,7 @@
       </main>
     </div>
 
-    <!-- Excel 导出列选择弹窗（与剑叶页共用） -->
+    <!-- 导出列选择弹窗 -->
     <ExportColumnsDialog
       :visible="showDownloadDialog"
       group="stem"
@@ -481,7 +486,6 @@
       @confirm="handleExportConfirm"
     />
 
-    <!-- Toast 提示 -->
     <Teleport to="body">
       <Transition name="toast-fade">
         <div v-if="toast.visible" class="toast-overlay" @click="hideToast">
@@ -526,7 +530,6 @@ const excelStore = useExcelExportStore();
 const history = computed(() => analysisStore.historyList);
 const processingJobs = computed(() => history.value.filter(job => job.status === 'processing'));
 
-// ---------------- 文件选择 ----------------
 const fileInput = ref(null);
 const folderInput = ref(null);
 const selectedFiles = ref([]);
@@ -538,17 +541,13 @@ const uploadPercent = ref(0);
 const totalPendingFiles = computed(() => selectedFiles.value.length + selectedFolderFiles.value.length);
 const isImage = (file) => Boolean(file && file.type && file.type.startsWith('image/'));
 
-// ---------------- 待处理文件预览 ----------------
 const previewPendingFile = ref(null);
 const blobUrls = new Set();
 
-// ---------------- 单图查看器：标签切换 + 缩放 / 拖拽 ----------------
 const viewTab = ref('annotated');
 const viewerImgRef = ref(null);
 const imageStatus = reactive({ loaded: false, error: false });
-// 图片加载失败时附加的可读原因（HTTP 状态 / 网络错误），显示在错误提示里
 const imageErrorDetail = ref('');
-// 失败重试的时间戳参数：0 表示还没重试过，非 0 时拼到 URL 上绕过浏览器缓存
 const retryToken = ref(0);
 
 const withRetry = (url, token) => {
@@ -567,13 +566,11 @@ const zoom = reactive({
   originY: 0,
 });
 
-// ---------------- 指标 ----------------
 const unit = ref('μm');
 const metrics = ref(null);
 const metricsLoading = ref(false);
 const metricsError = ref('');
 const metricsJobId = ref(null);
-// 同一条记录 + 同一单位只算一次；轮询刷新历史时不会重复触发
 let lastMetricsKey = '';
 
 const selectedJob = computed(() => analysisStore.selectedJob);
@@ -586,7 +583,6 @@ const currentImage = computed(() => {
   if (previewPendingFile.value) return previewPendingFile.value.blobUrl;
   const job = selectedJob.value;
   if (!job) return '';
-  // 原图可能是 TIFF（浏览器无法直接显示），后端会额外生成 JPEG 预览
   return viewTab.value === 'annotated'
     ? (job.annotatedImageUrl || job.originalPreviewUrl || job.originalImageUrl || '')
     : (job.originalPreviewUrl || job.originalImageUrl || job.annotatedImageUrl || '');
@@ -615,20 +611,17 @@ const viewerEmptyText = computed(() => {
   return t('该记录没有可显示的图片');
 });
 
-// ---------------- 状态轮询 ----------------
 watch(() => analysisStore.selectedJob?.status, (status) => {
   if (status === 'processing') {
     analysisStore.startHistoryPolling('job');
   } else {
     analysisStore.stopHistoryPolling('job');
   }
-  // 分割刚跑完：自动拉取指标，用户不用再点一次记录卡片
   if (status === 'completed' && analysisStore.selectedJob) {
     fetchMetrics(analysisStore.selectedJob, true);
   }
 }, { immediate: true });
 
-// 队列里有任务在跑时也保持轮询，左侧队列才能实时更新
 watch(() => processingJobs.value.length, (count) => {
   if (count > 0) {
     analysisStore.startHistoryPolling('queue');
@@ -637,8 +630,6 @@ watch(() => processingJobs.value.length, (count) => {
   }
 }, { immediate: true });
 
-// 仅在切换到另一条记录时重置缩放/拖拽状态，
-// 避免轮询刷新历史时把用户的缩放重置掉。
 watch(() => analysisStore.selectedJob?.analysisId, () => {
   resetZoom();
   if (analysisStore.selectedJob?.status === 'completed') {
@@ -667,7 +658,6 @@ async function fetchMetrics(job, force = false) {
   metricsError.value = '';
   try {
     const data = await analysisService.getMetrics(job.analysisId, { unit: unit.value });
-    // 选中的记录可能已经切换，丢弃过期响应
     if (analysisStore.selectedJob?.analysisId === job.analysisId) {
       metrics.value = data.metrics || null;
       metricsJobId.value = job.analysisId;
@@ -688,12 +678,10 @@ function onUnitChange(event) {
   }
 }
 
-// 比例尺随单位换算：统一走公共工具，切换单位时优先用恒为 µm/px 的值换算
 const unitSymbol = computed(() => unitSymbolOf(unit.value));
 
 const scalePerPx = computed(() => scalePerPxOf(metrics.value, unit.value));
 
-// 茎秆指标：与导出 Excel 的 15 项口径一致
 const metricCards = computed(() => {
   const m = metrics.value;
   if (!m) return [];
@@ -731,7 +719,6 @@ const metricCards = computed(() => {
   ];
 });
 
-// ---------------- 选中 / 导出 ----------------
 const selectedAnalysisIds = ref([]);
 const isExporting = ref(false);
 const showDownloadDialog = ref(false);
@@ -766,10 +753,8 @@ function toggleSelectAll() {
   selectedAnalysisIds.value = isAllSelected.value ? [] : [...allAnalysisIds.value];
 }
 
-// ---------------- 记录条：滚轮横向浏览 ----------------
 const { stripRef: recordStripRef, onWheel: onRecordWheel } = useHorizontalWheelScroll();
 
-// ---------- 批次分组 ----------
 const {
   batchCountOf,
   batchNameOf,
@@ -783,13 +768,11 @@ const {
   resolveBatchName: (job) => analysisStore.getBatchName(job.batchId),
 });
 
-// 历史刷新后清掉已经不存在的勾选
 watch(history, (list) => {
   const ids = new Set(list.map(job => job.analysisId));
   selectedAnalysisIds.value = selectedAnalysisIds.value.filter(id => ids.has(id));
 });
 
-// ---------------- 上传 ----------------
 function addFiles(list) {
   const images = Array.from(list || []).filter(isImage);
   if (!images.length) return;
@@ -870,7 +853,6 @@ function clearPreviewPendingFile() {
   previewPendingFile.value = null;
 }
 
-// 统一上传分析 —— 根据文件数量自动适配后端单张/批量接口
 async function handleUnifiedUpload() {
   if (totalPendingFiles.value === 0) {
     analysisStore.setError(t('请先选择图片文件或文件夹！'));
@@ -936,13 +918,11 @@ async function handleUnifiedUpload() {
   if (folderInput.value) folderInput.value.value = '';
 }
 
-// 选中记录（同时清掉待处理预览）
 function selectJob(job) {
   clearPreviewPendingFile();
   analysisStore.selectJobAction(job);
 }
 
-// ---------------- 删除 / 导出 ----------------
 async function deleteCurrentJob() {
   const job = analysisStore.selectedJob;
   if (!job) return;
@@ -1042,7 +1022,6 @@ async function batchExportJson() {
   }
 }
 
-// ---------------- Toast ----------------
 const toast = reactive({ visible: false, message: '', type: 'success' });
 const toastIconMap = { success: '✓', error: '✕', info: 'ℹ' };
 let toastTimer = null;
@@ -1066,11 +1045,9 @@ function hideToast() {
   }
 }
 
-// ---------------- 图片加载状态 ----------------
 async function handleImageError() {
   const url = currentImage.value;
 
-  // 先带时间戳重试一次（排除浏览器缓存里的失败响应），仍然失败才展示错误
   if (!retryToken.value && url) {
     retryToken.value = Date.now();
     return;
@@ -1098,15 +1075,10 @@ function imageLoaded() {
   imageErrorDetail.value = '';
 }
 
-/** 记录条缩略图加载完成后淡入，避免一出现就是一张硬切的图 */
 function markThumbLoaded(event) {
   event?.currentTarget?.classList.add('is-loaded');
 }
 
-/**
- * 主动校正图片加载状态：命中强缓存或元素被复用时浏览器可能不再派发 load，
- * 只依赖 @load 会让图片一直停在“加载中”的半透明状态。
- */
 function syncImageStatus() {
   const el = viewerImgRef.value;
   if (!el) return;
@@ -1126,15 +1098,12 @@ function resetImageStatus() {
   retryToken.value = 0;
 }
 
-// 当前图片地址变化（切记录 / 切标签 / 分割完成）时重置加载状态。
-// flush: 'pre' 保证先隐藏旧图再渲染新图，避免切换记录时闪一下上一张图。
 watch(currentImage, async () => {
   resetImageStatus();
   await nextTick();
   syncImageStatus();
 }, { flush: 'pre' });
 
-// ---------------- 缩放 / 拖拽 ----------------
 function resetZoom() {
   zoom.scale = 1;
   zoom.x = 0;
@@ -1154,7 +1123,6 @@ function onWheel(event) {
 function onMouseDown(event) {
   if (event.button !== 0 || zoom.scale <= 1) return;
 
-  // 点在倍率/重置按钮上时不触发拖拽
   if (event.target instanceof Element && event.target.closest('.zoom-pill')) return;
 
   zoom.dragging = true;
@@ -1180,10 +1148,7 @@ function onMouseUp() {
   window.removeEventListener('mouseup', onMouseUp);
 }
 
-// ---------------- 生命周期 ----------------
 onMounted(() => {
-  // 历史记录一到就先选中第一条，不等模型列表请求完成，
-  // 这样右侧大图可以更早开始加载；模型列表继续并行拉取。
   analysisStore.fetchHistoryIfStale()
     .then(() => {
       if (!analysisStore.selectedJob) {
@@ -1209,7 +1174,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ========== 页面骨架：与剑叶页一致（左设置 / 右舞台） ========== */
 .stem-page {
   display: flex;
   flex-direction: column;
@@ -1219,7 +1183,6 @@ onUnmounted(() => {
   padding: 4px 2px 4px;
 }
 
-/* ========== 两栏 ========== */
 .stem-layout {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
@@ -1307,7 +1270,6 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
-/* 文件夹入口：比主上传框弱一级，避免抢视线 */
 .folder-button {
   width: 100%;
   height: 30px;
@@ -1523,7 +1485,6 @@ onUnmounted(() => {
   color: var(--color-text-light);
 }
 
-/* ========== 舞台 ========== */
 .stem-stage {
   display: flex;
   flex-direction: column;
@@ -1632,7 +1593,6 @@ onUnmounted(() => {
   font-size: 11.5px;
 }
 
-/* 删除按钮采用「白底红字」的轻量危险样式（覆盖全局红底白字） */
 .stage-actions .danger,
 .records-actions .danger {
   border-color: rgba(220, 38, 38, 0.25);
@@ -1657,7 +1617,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* ---- 单图查看器：上方标签切换，下方一张大图 ---- */
 .viewer {
   display: flex;
   flex-direction: column;
@@ -1734,7 +1693,6 @@ onUnmounted(() => {
 }
 
 .viewer-canvas img.loading {
-  /* 加载中先完全隐藏，避免旧图/半解码图突然闪一下；加载完成后再淡入 */
   opacity: 0;
 }
 
@@ -1814,7 +1772,6 @@ onUnmounted(() => {
   font-size: 11px;
 }
 
-/* ---- 指标面板 ---- */
 .metric-panel {
   display: flex;
   flex-direction: column;
@@ -1900,7 +1857,6 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- 空状态 ---- */
 .stage-empty {
   display: flex;
   flex: 1 1 auto;
@@ -1933,7 +1889,6 @@ onUnmounted(() => {
   font-size: 12px;
 }
 
-/* ========== 记录条 ========== */
 .records {
   display: flex;
   flex: 0 0 auto;
@@ -2022,7 +1977,6 @@ onUnmounted(() => {
   text-align: center;
 }
 
-/* 横向卡片条：不用 scroll-snap，滚轮缓动才能连续滑动而不被逐帧吸回 */
 .record-strip {
   display: flex;
   gap: 10px;
@@ -2091,7 +2045,6 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.86);
 }
 
-/* 记录加载骨架：保持卡片尺寸，避免数据到达时整块跳变 */
 .record-skeleton-strip {
   pointer-events: none;
 }
@@ -2175,7 +2128,6 @@ onUnmounted(() => {
   color: var(--color-border-strong);
 }
 
-/* 批次角标：点了整批勾选，信息与旧版“文件夹分组”一致 */
 .batch-chip {
   display: inline-flex;
   align-items: center;
@@ -2215,7 +2167,6 @@ onUnmounted(() => {
   color: var(--color-primary-green-dark);
 }
 
-/* 错误横幅 */
 .alert {
   display: flex;
   align-items: center;
@@ -2242,7 +2193,6 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-/* Toast */
 .toast-overlay {
   position: fixed;
   right: 0;
@@ -2296,7 +2246,6 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* ========== 响应式 ========== */
 @media (max-width: 1180px) {
   .stem-layout {
     grid-template-columns: 300px minmax(0, 1fr);

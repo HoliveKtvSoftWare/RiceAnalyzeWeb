@@ -3,9 +3,6 @@ import LoginView from '../views/LoginView.vue';
 import HomeView from '../views/HomeView.vue';
 import { useAuthStore } from '@/stores/auth';
 
-// 说明：Home / Login 是首屏必经页面，直接同步引入；
-// 其余页面（StemView 单文件就有 70KB+，含大量样式）改为按需加载，
-// 首屏 JS 体积大幅减小，页面的首次可交互时间明显提前。
 const StemView = () => import('../views/StemView.vue');
 const FlagLeafView = () => import('../views/FlagLeafView.vue');
 const DataCenterView = () => import('../views/DataCenterView.vue');
@@ -28,14 +25,12 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
-      // 首页：路由路径为 /home
       path: '/home',
       name: 'home',
       component: HomeView,
       meta: { requiresAuth: false }
     },
     {
-      // 兼容旧地址：访问根路径时跳到 /home
       path: '/',
       redirect: '/home'
     },
@@ -81,4 +76,4 @@ router.beforeEach((to, from, next) => {
   }
 });
 
-export default router;
+export default router;
